@@ -1,0 +1,22 @@
+{
+  "name": "junie-gh-action",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.1",
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "@octokit/rest": "^22.0.1",
+    "@octokit/webhooks-types": "^7.6.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.3"
+  },
+  "private": true
+}

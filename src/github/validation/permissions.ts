@@ -1,0 +1,74 @@
+import * as core from "@actions/core";
+import type {ParsedGitHubContext} from "../context";
+import type {Octokit} from "@octokit/rest";
+
+/**
+ * Checks if the actor has write or admin permissions on the repository.
+ *
+ * This ensures only repository collaborators can trigger Junie, preventing unauthorized access.
+ * GitHub Apps (actors ending with "[bot]") automatically bypass this check.
+ *
+ * @param octokit - Octokit REST client for GitHub API calls
+ * @param context - Parsed GitHub context containing actor and repository information
+ * @returns `true` if actor has write/admin permissions or is a GitHub App, `false` otherwise
+ * @throws {Error} if unable to check permissions (API errors, network issues)
+ */
+export async function checkWritePermissions(
+    octokit: Octokit,
+    context: ParsedGitHubContext
+): Promise<boolean> {
+    const {actor} = context;
+    const repo = context.payload.repository;
+    try {
+        core.info(`Checking permissions for actor: ${actor}`);
+
+        // GitHub Apps (ending with "[bot]") are trusted and bypass permission checks
+        // This includes github-actions[bot], dependabot[bot], etc.
+        if (actor.endsWith("[bot]")) {
+            core.info(`Actor is a GitHub App: ${actor}`);
+            return true;
+        }
+
+        // For human users, fetch their permission level from GitHub API
+        // Possible levels: admin, write, read, none
+        const response = await octokit.repos.getCollaboratorPermissionLevel({
+            owner: repo.owner.login,
+            repo: repo.name,
+            username: actor,
+        });
+
+        const permissionLevel = response.data.permission;
+        core.info(`Permission level retrieved: ${permissionLevel}`);
+
+        if (permissionLevel === "admin" || permissionLevel === "write") {
+            core.info(`✓ Actor has write access: ${permissionLevel}`);
+            return true;
+        } else {
+            const repoFullName = `${repo.owner.login}/${repo.name}`;
+            core.warning(
+                `❌ Actor "${actor}" has insufficient permissions: ${permissionLevel} ` +
+                `(requires "write" or "admin" access to ${repoFullName})`
+            );
+            return false;
+        }
+    } catch (error) {
+        const repoFullName = `${repo.owner.login}/${repo.name}`;
+        core.error(`Failed to check permissions: ${error}`);
+
+        if (error instanceof Error && error.message.includes('404')) {
+            throw new Error(
+                `❌ Failed to check permissions: User "${actor}" is not a collaborator on ${repoFullName}. ` +
+                `Only repository collaborators with write access can trigger Junie.`
+            );
+        }
+
+        throw new Error(
+            `❌ Failed to check permissions for "${actor}" on ${repoFullName}. ` +
+            `This could be due to:\n` +
+            `• GitHub API rate limits\n` +
+            `• Insufficient token permissions (needs 'repo' scope)\n` +
+            `• Network connectivity issues\n` +
+            `Original error: ${error instanceof Error ? error.message : String(error)}`
+        );
+    }
+}
