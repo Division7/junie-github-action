@@ -10,8 +10,8 @@ import {
     isPushEvent,
 } from "../context";
 import type {Octokits} from "../api/client";
-import {WORKING_BRANCH_PREFIX} from "../constants";
 import {OUTPUT_VARS} from "../../constants/environment";
+import {WORKING_BRANCH_PREFIX} from "../../constants/github";
 
 export type BranchInfo = {
     baseBranch: string;

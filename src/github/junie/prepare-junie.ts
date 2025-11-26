@@ -12,10 +12,8 @@ import {Octokits} from "../api/client";
 import {prepareJunieTask} from "./junie-tasks";
 import {prepareJunieCLIToken} from "./junie-token";
 import {validateInputSize} from "../validation/input-size";
-import {
-    RESOLVE_CONFLICTS_ACTION
-} from "../constants";
 import {OUTPUT_VARS} from "../../constants/environment";
+import {RESOLVE_CONFLICTS_ACTION} from "../../constants/github";
 
 
 export async function prepare({
@@ -46,15 +44,19 @@ export async function prepare({
     await writeInitialFeedbackComment(octokit.rest, context);
 
     const branchInfo = await setupBranch(octokit, context);
+    const mcpServers = context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : []
+    console.log(`MCP Servers: ${mcpServers}`)
 
-    await prepareMcpConfig({
-        junieWorkingDir: context.inputs.junieWorkingDir,
-        allowedMcpServers: context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : [],
-        githubToken: tokenConfig.workingToken,
-        owner: context.payload.repository.owner.login,
-        repo: context.payload.repository.name,
-        currentBranch: branchInfo.workingBranch,
-    })
+    if (mcpServers.length > 0) {
+        await prepareMcpConfig({
+            junieWorkingDir: context.inputs.junieWorkingDir,
+            allowedMcpServers: context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : [],
+            githubToken: tokenConfig.workingToken,
+            owner: context.payload.repository.owner.login,
+            repo: context.payload.repository.name,
+            currentBranch: branchInfo.workingBranch,
+        })
+    }
 
     await prepareJunieCLIToken(context)
 

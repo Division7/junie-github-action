@@ -1,4 +1,4 @@
-import {COMMIT_MESSAGE_TEMPLATE, PR_BODY_TEMPLATE, PR_TITLE_TEMPLATE} from "../github/constants";
+import {COMMIT_MESSAGE_TEMPLATE, PR_BODY_TEMPLATE, PR_TITLE_TEMPLATE} from "../constants/github";
 import {GitHubContext, isEntityContext} from "../github/context";
 import {execSync} from 'child_process';
 import * as core from "@actions/core";

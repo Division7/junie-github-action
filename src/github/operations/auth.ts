@@ -2,8 +2,8 @@ import {GITHUB_SERVER_URL} from "../api/config";
 import {GitHubContext} from "../context";
 import {$} from "bun";
 import type {Octokits} from "../api/client";
-import {GITHUB_ACTIONS_BOT} from "../constants";
 import type {GitHubTokenConfig} from "../token";
+import {GITHUB_ACTIONS_BOT} from "../../constants/github";
 
 interface GitUser {
     login: string;

@@ -1,5 +1,5 @@
 import {GITHUB_SERVER_URL} from "../../api/config";
-import {INIT_COMMENT_BODY} from "../../constants";
+import {INIT_COMMENT_BODY} from "../../../constants/github";
 
 export function createJobRunLink(
     owner: string,

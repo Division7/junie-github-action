@@ -14,9 +14,9 @@ import {
     WorkflowDispatchEvent,
     WorkflowRunEvent,
 } from "@octokit/webhooks-types";
-import {DEFAULT_TRIGGER_PHRASE, RESOLVE_CONFLICTS_ACTION} from "./constants";
 import type {TokenOwner} from "./operations/auth";
 import {OUTPUT_VARS} from "../constants/environment";
+import {DEFAULT_TRIGGER_PHRASE, RESOLVE_CONFLICTS_ACTION} from "../constants/github";
 
 
 export type ScheduleEvent = {

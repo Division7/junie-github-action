@@ -10,8 +10,8 @@ import {JunieTask} from "./types/junie";
 import * as core from "@actions/core";
 import {BranchInfo} from "../operations/branch";
 import {isReviewOrCommentHasTrigger} from "../validation/trigger";
-import {RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP} from "../constants";
 import {OUTPUT_VARS} from "../../constants/environment";
+import {RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP} from "../../constants/github";
 
 export async function prepareJunieTask(context: GitHubContext, branchInfo: BranchInfo) {
     const junieTask: JunieTask = {}
