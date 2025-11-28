@@ -27,6 +27,10 @@ inputs:
     description: "Whether to create a new branch for PR instead of pushing to the same branch"
     required: false
     default: "false"
+  silent_mode:
+    description: "Silent mode - skip comments, branch creation, commits. Only prepare data and run Junie for output consumption."
+    required: false
+    default: "false"
 
   # Junie configuration
   prompt:
@@ -109,6 +113,7 @@ runs:
         ALLOWED_MCP_SERVERS: ${{ inputs.allowed_mcp_servers }}
         RESOLVE_CONFLICTS: ${{ inputs.resolve_conflicts }}
         CREATE_NEW_BRANCH_FOR_PR: ${{ inputs.create_new_branch_for_pr }}
+        SILENT_MODE: ${{ inputs.silent_mode }}
         ALL_INPUTS: ${{ toJson(inputs) }}
 
 
@@ -162,7 +167,7 @@ runs:
     - uses: EndBug/add-and-commit@v9
       name: Commit changes
       id: commit
-      if: steps.prepare.outputs.SHOULD_SKIP != 'true' && (steps.junie-run-results.outputs.ACTION_TO_DO == 'COMMIT_CHANGES' || steps.junie-run-results.outputs.ACTION_TO_DO == 'CREATE_PR')
+      if: steps.prepare.outputs.SHOULD_SKIP != 'true' && inputs.silent_mode != 'true' && (steps.junie-run-results.outputs.ACTION_TO_DO == 'COMMIT_CHANGES' || steps.junie-run-results.outputs.ACTION_TO_DO == 'CREATE_PR')
       with:
         author_name: ${{ steps.prepare.outputs.ACTOR_NAME }}
         author_email: ${{ steps.prepare.outputs.ACTOR_EMAIL }}
@@ -170,7 +175,7 @@ runs:
         new_branch: ${{ steps.prepare.outputs.WORKING_BRANCH }}
 
     - name: Make Pull Request for the changes
-      if: steps.prepare.outputs.SHOULD_SKIP != 'true' && steps.junie-run-results.outputs.ACTION_TO_DO == 'CREATE_PR'
+      if: steps.prepare.outputs.SHOULD_SKIP != 'true' && inputs.silent_mode != 'true' && steps.junie-run-results.outputs.ACTION_TO_DO == 'CREATE_PR'
       id: pull-request
       shell: bash
       continue-on-error: true
@@ -186,7 +191,7 @@ runs:
 
     - name: Push changes
       id: push
-      if: steps.prepare.outputs.SHOULD_SKIP != 'true' && steps.junie-run-results.outputs.ACTION_TO_DO == 'PUSH'
+      if: steps.prepare.outputs.SHOULD_SKIP != 'true' && inputs.silent_mode != 'true' && steps.junie-run-results.outputs.ACTION_TO_DO == 'PUSH'
       shell: bash
       run: |
         git push --set-upstream origin HEAD

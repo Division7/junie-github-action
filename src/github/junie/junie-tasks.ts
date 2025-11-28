@@ -173,7 +173,7 @@ export async function prepareJunieTask(
     }
 
     if (context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)) {
-        junieTask.mergeTask = {branch: branchInfo.baseBranch, type: "merge"}
+        junieTask.mergeTask = {branch: branchInfo.prBaseBranch || branchInfo.baseBranch, type: "merge"}
     }
 
     core.setOutput(OUTPUT_VARS.EJ_TASK, JSON.stringify(junieTask));

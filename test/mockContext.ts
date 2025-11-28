@@ -11,6 +11,7 @@ import type {
 const defaultInputs = {
     resolveConflicts: false,
     createNewBranchForPR: false,
+    silentMode: false,
     junieWorkingDir: "/tmp/junie-work",
     appToken: "test-token",
     prompt: "",

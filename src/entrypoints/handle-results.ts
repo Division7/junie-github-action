@@ -20,7 +20,7 @@ export async function handleResults() {
         if (junieErrors && (junieErrors as string[]).length > 0) {
             throw new Error(`Junie run failed with errors: ${junieErrors.join('\n')}`)
         }
-        const actionToDo = await getActionToDo();
+        const actionToDo = await getActionToDo(context.inputs.silentMode);
         const title = junieJsonOutput.taskName
         const body = junieJsonOutput.result
         let issueId
@@ -56,7 +56,12 @@ export async function handleResults() {
     }
 }
 
-async function getActionToDo(): Promise<ActionType> {
+async function getActionToDo(silentMode: boolean): Promise<ActionType> {
+    if (silentMode) {
+        console.log('Silent mode enabled - no git operations will be performed');
+        return ActionType.NOTHING;
+    }
+
     const hasChangedFiles = await checkForChangedFiles();
     const hasUnpushedCommits = await checkForUnpushedCommits();
     const initCommentId = process.env[OUTPUT_VARS.INIT_COMMENT_ID];

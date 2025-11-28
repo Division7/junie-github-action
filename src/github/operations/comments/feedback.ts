@@ -30,6 +30,10 @@ export async function writeInitialFeedbackComment(
     octokit: Octokit,
     context: GitHubContext,
 ) {
+    if (context.inputs.silentMode) {
+        console.log('Silent mode enabled - skipping initial feedback comment');
+        return;
+    }
     const {owner, name} = context.payload.repository;
     const ownerLogin = owner.login;
 

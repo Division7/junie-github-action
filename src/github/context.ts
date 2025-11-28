@@ -56,6 +56,7 @@ type BaseContext = {
     inputs: {
         resolveConflicts: boolean;
         createNewBranchForPR: boolean;
+        silentMode: boolean;
         junieWorkingDir: string;
         appToken: string;
         baseBranch?: string;
@@ -114,6 +115,7 @@ export function parseGitHubContext(tokenOwner: TokenOwner): GitHubContext {
         inputs: {
             resolveConflicts: process.env.RESOLVE_CONFLICTS == "true",
             createNewBranchForPR: process.env.CREATE_NEW_BRANCH_FOR_PR == "true",
+            silentMode: process.env.SILENT_MODE == "true",
             junieWorkingDir: process.env.JUNIE_WORKING_DIR!,
             headRef: process.env.GITHUB_HEAD_REF,
             appToken: process.env.APP_TOKEN!,
