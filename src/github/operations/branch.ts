@@ -11,7 +11,8 @@ import {
 } from "../context";
 import type {Octokits} from "../api/client";
 import {OUTPUT_VARS} from "../../constants/environment";
-import {WORKING_BRANCH_PREFIX} from "../../constants/github";
+import {RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP, WORKING_BRANCH_PREFIX} from "../../constants/github";
+import {isReviewOrCommentHasTrigger} from "../validation/trigger";
 
 export type BranchInfo = {
     baseBranch: string;
@@ -197,6 +198,35 @@ async function setupWorkingBranch(context: GitHubContext, octokit: Octokits) {
 }
 
 /**
+ * Ensures the repository has sufficient git history for merge operations.
+ *
+ * GitHub Actions by default clones with shallow history (depth=1).
+ * For merge operations, we need the full history of the base branch to find the merge-base.
+ *
+ * @param baseBranch - The branch to merge from (e.g., "main")
+ * @throws {Error} if unable to fetch history
+ */
+export async function ensureMergeHistory(baseBranch: string) {
+    console.log(`Fetching full history of ${baseBranch} for merge operation...`);
+
+    try {
+        // Fetch the base branch with full history (no --depth = complete history)
+        await $`git fetch origin ${baseBranch}`;
+        console.log(`✓ Successfully fetched ${baseBranch} with full history`);
+    } catch (error) {
+        throw new Error(
+            `❌ Failed to fetch ${baseBranch} history for merge operation. ` +
+            `This could be due to:\n` +
+            `• Branch "${baseBranch}" does not exist in the repository\n` +
+            `• Network connectivity issues\n` +
+            `• Insufficient permissions to fetch from the repository\n` +
+            `• Git authentication problems\n` +
+            `Original error: ${error instanceof Error ? error.message : String(error)}`
+        );
+    }
+}
+
+/**
  * Sets up the working branch for Junie to make changes.
  *
  * This is the main entry point for branch management. It handles different scenarios:
@@ -213,6 +243,11 @@ async function setupWorkingBranch(context: GitHubContext, octokit: Octokits) {
  */
 export async function setupBranch(octokit: Octokits, context: GitHubContext) {
     let branchInfo = await setupWorkingBranch(context, octokit)
+
+    // If we need to resolve conflicts, ensure we have full git history for merge operations
+    if (context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)) {
+        await ensureMergeHistory(branchInfo.baseBranch);
+    }
 
     // Set GitHub Actions outputs for use in subsequent steps
     core.setOutput(OUTPUT_VARS.BASE_BRANCH, branchInfo.baseBranch);
