@@ -133,6 +133,22 @@ describe("Comment Feedback Operations", () => {
             writeInitialFeedbackComment(mockOctokit, mockIssueCommentContext)
         ).rejects.toThrow("API Error");
     });
+
+    test("should skip comment creation in silent mode", async () => {
+      const silentModeContext = {
+        ...mockIssueCommentContext,
+        inputs: {
+          ...mockIssueCommentContext.inputs,
+          silentMode: true,
+        },
+      } as GitHubContext;
+
+      const commentId = await writeInitialFeedbackComment(mockOctokit, silentModeContext);
+
+      expect(commentId).toBeUndefined();
+      expect(createCommentSpy).not.toHaveBeenCalled();
+      expect(setOutputSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe("writeFinishFeedbackComment", () => {
