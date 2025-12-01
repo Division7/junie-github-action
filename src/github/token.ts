@@ -21,6 +21,7 @@ export async function setupGitHubToken(): Promise<GitHubTokenConfig> {
         workingToken = defaultToken;
     }
 
+    core.setSecret(workingToken);
     core.setOutput(OUTPUT_VARS.EJ_AUTH_GITHUB_TOKEN, workingToken);
 
     return {

@@ -2,6 +2,31 @@
 
 A powerful GitHub Action that integrates [Junie](https://www.jetbrains.com/junie/) (JetBrains' AI coding agent) into your GitHub workflows to automate code changes, issue resolution, PR management, and conflict resolution. Junie can understand your codebase, implement fixes, review changes, and respond to developer requests directly in issues and pull requests.
 
+## 📑 Table of Contents
+
+- [Features](#features)
+- [Quickstart](#quickstart)
+  - [Prerequisites](#prerequisites)
+  - [Basic Setup](#basic-setup)
+- [Configuration](#configuration)
+  - [Input Parameters](#input-parameters)
+  - [Outputs](#outputs)
+  - [Required Permissions](#required-permissions)
+  - [GitHub Token Considerations](#github-token-considerations)
+- [Use Cases & Examples](#use-cases--examples)
+  - [Interactive Development](#interactive-development)
+  - [Conflict Resolution](#conflict-resolution)
+  - [Silent Mode (Output-Only)](#silent-mode-output-only)
+  - [Single Comment Mode](#single-comment-mode)
+  - [CI Failure Analysis](#ci-failure-analysis)
+  - [Custom Automation](#custom-automation)
+  - [Label-Based Triggers](#label-based-triggers)
+- [Real-World Examples](#real-world-examples)
+- [How It Works](#how-it-works)
+- [Security Considerations](#security-considerations)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
 ## Features
 
 - **Interactive Code Assistant**: Responds to @junify mentions in comments, issues, and PRs
@@ -77,283 +102,7 @@ jobs:
    - Mention `@junify review this change` in a PR
    - Add the `junie` label to trigger automatically
 
-## Solutions & Use Cases
-
-### Interactive Development
-
-**Use Case**: Get AI assistance directly in issues and PRs
-
-```yaml
-# Trigger with @junify mentions
-on:
-  issue_comment:
-    types: [created]
-```
-
-**Example**: Comment `@junify implement a validation function for email addresses` on an issue, and Junie will create a PR with the implementation.
-
----
-
-### Conflict Resolution
-
-**Use Case**: Resolve merge conflicts manually or automatically
-
-#### Option 1: Manual Trigger (Recommended)
-
-Simply comment on a PR with conflicts:
-
-```markdown
-@junify please resolve the merge conflicts
-```
-
-Junie will automatically detect the conflicts and resolve them. **No additional configuration needed** - works with your basic Junie workflow.
-
-#### Option 2: Automatic Detection
-
-For automatic conflict detection without manual trigger, add this workflow:
-
-```yaml
-name: Resolve Conflicts
-
-on:
-  push:
-  workflow_dispatch:
-    inputs:
-      prNumber:
-        description: "PR number"
-        required: true
-
-jobs:
-  resolve-conflicts:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: JetBrains/junie-github-action@main
-        with:
-          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
-          resolve_conflicts: true
-```
-
-**How it works**:
-- **Manual**: Ask Junie anytime via `@junify resolve conflicts` comment
-- **Automatic**: With `resolve_conflicts: true`, Junie monitors pushes and auto-resolves conflicts in open PRs
-
-**Note**: The `resolve_conflicts: true` setting is only needed for automatic conflict detection. For manual resolution via comments, your basic Junie workflow is sufficient.
-
----
-
-### Silent Mode (Output-Only)
-
-**Use Case**: Get Junie analysis without creating comments, branches, or commits
-
-```yaml
-name: Code Analysis
-
-on:
-  pull_request_review_comment:
-    types: [created]
-
-jobs:
-  analyze:
-    if: contains(github.event.comment.body, '@junify')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: JetBrains/junie-github-action@main
-        id: junie
-        with:
-          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
-          silent_mode: true
-
-      - name: Process Junie Output
-        if: steps.junie.outputs.should_skip != 'true'
-        run: |
-          echo "Title: ${{ steps.junie.outputs.junie_title }}"
-          echo "Summary: ${{ steps.junie.outputs.junie_summary }}"
-
-          # Send to external system, generate custom report, etc.
-          curl -X POST https://your-api.com/analysis \
-            -d "title=${{ steps.junie.outputs.junie_title }}" \
-            -d "summary=${{ steps.junie.outputs.junie_summary }}"
-```
-
-**How it works**:
-- **For PRs**: Checks out the PR branch (not the current branch)
-- **For Issues**: Uses the current branch without creating a new one
-- **No Comments**: Skips all GitHub comment creation
-- **No Git Operations**: Skips commits, branch creation, and PRs
-- **Output Available**: All results available via action outputs and Job Summary
-
-**When to use**:
-- Custom reporting workflows
-- External CI/CD integration
-- Code analysis without modification
-- Testing Junie responses before applying changes
-
----
-
-### Single Comment Mode
-
-**Use Case**: Keep GitHub conversations clean by updating a single comment instead of creating multiple comments
-
-```yaml
-name: Junie
-
-on:
-  issue_comment:
-    types: [created]
-  issues:
-    types: [opened]
-
-jobs:
-  junie:
-    if: contains(github.event.comment.body, '@junify') || contains(github.event.issue.body, '@junify')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: JetBrains/junie-github-action@main
-        with:
-          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
-          use_single_comment: true
-```
-
-**How it works**:
-- On first run, Junie creates a new comment with progress and results
-- On subsequent runs, Junie finds and updates the same comment instead of creating new ones
-- **Workflow-specific**: Each workflow maintains its own comment, allowing multiple Junie workflows in the same issue/PR
-- Works even when using different tokens or GitHub Apps
-- **For PR review comments** (code-level): Searches only within the specific comment thread, preventing cross-thread updates
-
-**When to use**:
-- Long-running issue conversations with multiple Junie invocations
-- PRs where you call Junie multiple times for different tasks
-- Keeping the comment section clean and organized
-- Reducing notification spam for issue/PR participants
-
-**Example conversation**:
-```markdown
-User: @junify please add input validation
-[Junie creates comment: "Working on it..."]
-[Junie updates same comment: "✓ Done! Added validation to forms.ts"]
-
-User: @junify also add unit tests
-[Junie updates same comment: "Working on it..."]
-[Junie updates same comment: "✓ Done! Added tests to forms.test.ts"]
-```
-
-**Thread-aware behavior** for PR code review comments:
-- When commenting on specific lines of code, Junie updates comments only within that thread
-- Different review threads maintain independent Junie comments
-- Prevents confusion when discussing multiple topics in the same PR
-
-```markdown
-# Thread 1: On line 42 in auth.ts
-User: @junify add error handling here
-[Junie updates comment in Thread 1]
-
-# Thread 2: On line 156 in database.ts
-User: @junify optimize this query
-[Junie updates comment in Thread 2 - independent from Thread 1]
-```
-
----
-
-### CI Failure Analysis
-
-**Use Case**: Investigate and fix failing tests or checks
-
-```yaml
-name: Fix Failed Checks
-
-on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-
-jobs:
-  analyze-failures:
-    if: github.event.workflow_run.conclusion == 'failure'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      checks: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: JetBrains/junie-github-action@main
-        with:
-          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
-          allowed_mcp_servers: mcp_github_checks_server
-          prompt: |
-            Investigate the failed CI checks and suggest fixes.
-            Use the get_pr_failed_checks_info MCP tool to analyze error logs.
-```
-
-**How it works**: The MCP GitHub Checks Server extracts error logs from failed runs, and Junie analyzes them to suggest or implement fixes.
-
----
-
-### Custom Automation
-
-**Use Case**: Execute custom tasks with specific instructions
-
-```yaml
-on:
-  schedule:
-    - cron: '0 0 * * 0'  # Weekly
-
-jobs:
-  weekly-audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: JetBrains/junie-github-action@main
-        with:
-          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
-          prompt: |
-            Review the codebase for:
-            - Unused dependencies in package.json
-            - Outdated TODO comments
-            - Security vulnerabilities in dependencies
-
-            Create an issue with your findings.
-```
-
----
-
-### Label-Based Triggers
-
-**Use Case**: Trigger Junie by adding a label to issues
-
-```yaml
-on:
-  issues:
-    types: [labeled]
-
-jobs:
-  junie:
-    if: github.event.label.name == 'auto-fix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: JetBrains/junie-github-action@main
-        with:
-          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
-          label_trigger: "auto-fix"
-```
-
-## Configuration Reference
+## Configuration
 
 ### Input Parameters
 
@@ -431,26 +180,318 @@ jobs:
 
 ### Required Permissions
 
+The action requires specific GitHub token permissions to perform its operations. Configure these in your workflow:
+
 ```yaml
 permissions:
-  contents: write      # Create branches and commits
-  pull-requests: write # Create and update PRs
-  issues: write        # Comment on issues
-  checks: read        # Optional: for CI failure analysis
+  contents: write      # Required to create branches, make commits, and push changes
+  pull-requests: write # Required to create PRs, add comments to PRs, and update PR status
+  issues: write        # Required to add comments to issues and update issue metadata
+  checks: read         # Optional: only needed for CI failure analysis with MCP servers
 ```
 
-## How It Works
+**Minimal permissions** for `silent_mode` (read-only operations):
+```yaml
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+```
 
-1. **Trigger Detection**: The action detects triggers (mentions, labels, assignments, or prompts)
-2. **Validation**: Verifies permissions and checks if the actor is human
-3. **Branch Management**: Creates or checks out the appropriate working branch
-4. **Task Preparation**: Converts GitHub context into a Junie-compatible task
-5. **MCP Setup**: Configures enabled MCP servers for enhanced capabilities
-6. **Junie Execution**: Runs Junie CLI with the prepared task
-7. **Result Processing**: Analyzes changes and determines the action (commit, PR, or comment)
-8. **Feedback**: Updates GitHub with results, PR links, and commit information
+### GitHub Token Considerations
 
-## Examples
+#### Default Token Limitation
+
+When using the default `github.token` (automatically provided by GitHub Actions), there's an important security limitation you should be aware of:
+
+**⚠️ Pull requests and changes created using the default token will NOT trigger other workflow runs.**
+
+For example, if you use the default token:
+```yaml
+- uses: JetBrains/junie-github-action@main
+  with:
+    junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+    # No custom_github_token specified - uses default github.token
+```
+
+When Junie creates a PR or pushes commits, the following workflows will **NOT be triggered**:
+- Workflows with `pull_request` or `pull_request_target` triggers
+- Workflows with `pull_request_review` or `pull_request_review_comment` triggers
+- Workflows with `push` triggers (on the new branch)
+- Workflows with `create` triggers (for new branches)
+
+**Why?** This is a GitHub security feature designed to prevent accidental infinite workflow loops.
+
+#### Using a Custom Token
+
+To allow Junie's changes to trigger other workflows, provide a custom token:
+
+```yaml
+- uses: JetBrains/junie-github-action@main
+  with:
+    junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+    custom_github_token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
+```
+
+**Custom token options:**
+
+##### 1. Personal Access Token (PAT)
+
+- Go to GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens
+- Grant `repo` scope (or fine-grained: Contents, Pull requests, Issues permissions)
+- Store in repository secrets as `CUSTOM_GITHUB_TOKEN`
+
+##### 2. GitHub App Token (Recommended for organizations)
+
+GitHub App tokens
+
+**Setup steps:**
+
+a. **Install Your App:**
+   - Click "Install App" in the sidebar
+   - Select your repository
+
+b. **Add secrets to repository:**
+   - Go to repository Settings → Secrets and variables → Actions
+   - Add `APP_ID` with your App ID
+   - Add `APP_PRIVATE_KEY` with the entire contents of the `.pem` file
+
+e. **Use in workflow:**
+
+```yaml
+jobs:
+  junie:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Generate token from GitHub App
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # Use the generated token
+      - uses: JetBrains/junie-github-action@main
+        with:
+          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+          custom_github_token: ${{ steps.app-token.outputs.token }}
+```
+
+## Use Cases & Examples
+
+### Interactive Development
+
+**Use Case**: Get AI assistance directly in issues and PRs
+
+```yaml
+# Trigger with @junify mentions
+on:
+  issue_comment:
+    types: [created]
+```
+
+**Example**: Comment `@junify implement a validation function for email addresses` on an issue, and Junie will create a PR with the implementation.
+
+---
+
+### Conflict Resolution
+
+**Use Case**: Resolve merge conflicts manually or automatically
+
+#### Option 1: Manual Trigger (Recommended)
+
+Simply comment on a PR with conflicts:
+
+```markdown
+@junify resolve conflicts
+```
+
+Junie will automatically detect the conflicts and resolve them. **No additional configuration needed** - works with your basic Junie workflow.
+
+#### Option 2: Automatic Detection
+
+For automatic conflict detection without manual trigger, add this workflow:
+
+```yaml
+name: Resolve Conflicts
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      prNumber:
+        description: "PR number"
+        required: true
+
+jobs:
+  resolve-conflicts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JetBrains/junie-github-action@main
+        with:
+          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+          resolve_conflicts: true
+```
+
+**How it works**:
+- **Manual**: Ask Junie anytime via `@junify resolve conflicts` comment
+- **Automatic**: With `resolve_conflicts: true`, Junie monitors pushes and auto-resolves conflicts in open PRs where pushed branch is the base branch.
+
+**Note**: The `resolve_conflicts: true` setting is only needed for automatic conflict detection. For manual resolution via comments, your basic Junie workflow is sufficient.
+
+---
+
+### Silent Mode (Output-Only)
+
+**Use Case**: Get Junie analysis without creating comments, branches, or commits
+
+```yaml
+name: Code Analysis
+
+on:
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  analyze:
+    if: contains(github.event.comment.body, '@junify')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: JetBrains/junie-github-action@main
+        id: junie
+        with:
+          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+          silent_mode: true
+
+      - name: Process Junie Output
+        if: steps.junie.outputs.should_skip != 'true'
+        run: |
+          echo "Title: ${{ steps.junie.outputs.junie_title }}"
+          echo "Summary: ${{ steps.junie.outputs.junie_summary }}"
+
+          # Send to external system, generate custom report, etc.
+          curl -X POST https://your-api.com/analysis \
+            -d "title=${{ steps.junie.outputs.junie_title }}" \
+            -d "summary=${{ steps.junie.outputs.junie_summary }}"
+```
+
+**When to use**:
+- Custom reporting workflows
+- External CI/CD integration
+- Code analysis without modification
+- Testing Junie responses before applying changes
+
+---
+
+### Single Comment Mode
+
+**Use Case**: Keep GitHub conversations clean by updating a single comment instead of creating multiple comments
+
+```yaml
+name: Junie
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened]
+
+jobs:
+  junie:
+    if: contains(github.event.comment.body, '@junify') || contains(github.event.issue.body, '@junify')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JetBrains/junie-github-action@main
+        with:
+          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+          use_single_comment: true
+```
+
+**How it works**:
+- On first run, Junie creates a new comment with progress and results
+- On subsequent runs, Junie finds and updates the same comment instead of creating new ones
+- **Workflow-specific**: Each workflow maintains its own comment, allowing multiple Junie workflows in the same issue/PR
+- **For PR review comments** (code-level): Searches only within the specific comment thread, preventing cross-thread updates
+
+---
+
+### CI Failure Analysis
+
+**Use Case**: Investigate and fix failing tests or checks
+
+```yaml
+name: Fix Failed Checks
+
+on:
+  workflow_run:
+    workflows: ["<your CI workflow name>"]
+    types: [completed]
+
+jobs:
+  analyze-failures:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JetBrains/junie-github-action@main
+        with:
+          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+          allowed_mcp_servers: mcp_github_checks_server
+          prompt: |
+            Investigate the failed CI checks and suggest fixes.
+            Use the get_pr_failed_checks_info MCP tool to analyze error logs.
+```
+
+**How it works**: The MCP GitHub Checks Server extracts error logs from failed runs, and Junie analyzes them to suggest or implement fixes.
+
+---
+
+### Label-Based Triggers
+
+**Use Case**: Trigger Junie by adding a label to issues
+
+```yaml
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  junie:
+    if: github.event.label.name == 'auto-fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JetBrains/junie-github-action@main
+        with:
+          junie_api_key: ${{ secrets.JUNIE_API_KEY }}
+          label_trigger: "auto-fix"
+```
+
+## Real-World Examples
 
 ### Respond to PR Comments
 
@@ -505,6 +546,17 @@ permissions:
 - Comments on PR with success status
 ```
 
+## How It Works
+
+1. **Trigger Detection**: The action detects triggers (mentions, labels, assignments, or prompts)
+2. **Validation**: Verifies permissions and checks if the actor is human
+3. **Branch Management**: Creates or checks out the appropriate working branch
+4. **Task Preparation**: Converts GitHub context into a Junie-compatible task
+5. **MCP Setup**: Configures enabled MCP servers for enhanced capabilities
+6. **Junie Execution**: Runs Junie CLI with the prepared task
+7. **Result Processing**: Analyzes changes and determines the action (commit, PR, or comment)
+8. **Feedback**: Updates GitHub with results, PR links, and commit information
+
 ## Security Considerations
 
 - **Permission Validation**: Only users with write access can trigger Junie (by default)
@@ -537,12 +589,3 @@ permissions:
 - Verify `create_new_branch_for_pr` setting for PR scenarios
 - Review action outputs for `ACTION_TO_DO` value
 - Ensure there are actual file changes to commit
-
-## Contributing
-
-Contributions are welcome! Please ensure:
-- TypeScript code follows existing patterns
-- Test your changes with actual GitHub workflows
-- Update documentation for new features
-
----

@@ -6,7 +6,7 @@ import {createOctokit} from "../github/api/client";
 import {parseGitHubContext} from "../github/context";
 import {prepare} from "../github/junie/prepare-junie";
 import {getTokenOwnerInfo} from "../github/operations/auth";
-import {OUTPUT_VARS} from "../constants/environment";
+import {handleStepError} from "../utils/error-handler";
 
 async function run() {
     try {
@@ -21,10 +21,7 @@ async function run() {
             tokenConfig
         });
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        core.setFailed(`Prepare step failed with error: ${errorMessage}`);
-        core.setOutput(OUTPUT_VARS.EXCEPTION, errorMessage);
-        process.exit(1);
+        handleStepError("Prepare step", error);
     }
 }
 

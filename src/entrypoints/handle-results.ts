@@ -3,6 +3,7 @@ import {GitHubContext, isEntityContext} from "../github/context";
 import {execSync} from 'child_process';
 import * as core from "@actions/core";
 import {ENV_VARS, OUTPUT_VARS} from "../constants/environment";
+import {handleStepError} from "../utils/error-handler";
 
 export enum ActionType {
     WRITE_COMMENT = 'WRITE_COMMENT',
@@ -49,10 +50,7 @@ export async function handleResults() {
                 break;
         }
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        core.setFailed(`Handle results step failed with error: ${errorMessage}`);
-        core.setOutput(OUTPUT_VARS.EXCEPTION, errorMessage);
-        process.exit(1);
+        handleStepError("Handle results step", error);
     }
 }
 

@@ -4,6 +4,7 @@ import * as core from "@actions/core";
 import { Octokit } from "@octokit/rest";
 import { GitHubContext } from "../github/context";
 import { ENV_VARS, OUTPUT_VARS } from "../constants/environment";
+import { handleStepError } from "../utils/error-handler";
 
 export async function createPullRequest() {
     try {
@@ -33,10 +34,7 @@ export async function createPullRequest() {
         console.log(`Successfully created PR #${pr.number}: ${pr.html_url}`);
         core.setOutput("pull-request-url", pr.html_url);
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        core.setFailed(`Create PR step failed with error: ${errorMessage}`);
-        core.setOutput(OUTPUT_VARS.EXCEPTION, errorMessage);
-        process.exit(1);
+        handleStepError("Create PR step", error);
     }
 }
 

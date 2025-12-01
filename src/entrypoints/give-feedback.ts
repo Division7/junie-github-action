@@ -7,6 +7,7 @@ import {ENV_VARS, OUTPUT_VARS} from "../constants/environment";
 import {formatJunieSummary} from "./format-summary";
 import {appendFileSync} from "fs";
 import {createOctokit} from "../github/api/client";
+import {handleStepError} from "../utils/error-handler";
 
 /**
  * Writes feedback comment to GitHub issue/PR if initCommentId is available
@@ -104,10 +105,7 @@ export async function giveFeedback() {
             // Don't fail the whole step if summary generation fails
         }
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        core.setFailed(`Give feedback step failed with error: ${errorMessage}`);
-        core.setOutput(OUTPUT_VARS.EXCEPTION, errorMessage);
-        process.exit(1);
+        handleStepError("Give feedback step", error);
     }
 }
 
