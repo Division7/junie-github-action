@@ -4,10 +4,10 @@ A powerful GitHub Action that integrates [Junie](https://www.jetbrains.com/junie
 
 ## Features
 
-- **Interactive Code Assistant**: Responds to @junie mentions in comments, issues, and PRs
+- **Interactive Code Assistant**: Responds to @junify mentions in comments, issues, and PRs
 - **Issue Resolution**: Automatically implements solutions for GitHub issues
 - **PR Management**: Reviews code changes and implements requested modifications
-- **Conflict Resolution**: Resolve merge conflicts via `@junie` comment or automatic detection
+- **Conflict Resolution**: Resolve merge conflicts via `@junify` comment or automatic detection
 - **CI Failure Analysis**: Investigates failed checks and suggests fixes using MCP integration
 - **Flexible Triggers**: Activate via mentions, assignees, labels, or custom prompts
 - **Smart Branch Management**: Context-aware branch creation and management
@@ -59,7 +59,7 @@ on:
 
 jobs:
   junie:
-    if: contains(github.event.comment.body, '@junie') || contains(github.event.issue.body, '@junie')
+    if: contains(github.event.comment.body, '@junify') || contains(github.event.issue.body, '@junify')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -73,8 +73,8 @@ jobs:
 ```
 
 3. Start using Junie:
-   - Comment `@junie help me fix this bug` on an issue
-   - Mention `@junie review this change` in a PR
+   - Comment `@junify help me fix this bug` on an issue
+   - Mention `@junify review this change` in a PR
    - Add the `junie` label to trigger automatically
 
 ## Solutions & Use Cases
@@ -84,13 +84,13 @@ jobs:
 **Use Case**: Get AI assistance directly in issues and PRs
 
 ```yaml
-# Trigger with @junie mentions
+# Trigger with @junify mentions
 on:
   issue_comment:
     types: [created]
 ```
 
-**Example**: Comment `@junie implement a validation function for email addresses` on an issue, and Junie will create a PR with the implementation.
+**Example**: Comment `@junify implement a validation function for email addresses` on an issue, and Junie will create a PR with the implementation.
 
 ---
 
@@ -103,7 +103,7 @@ on:
 Simply comment on a PR with conflicts:
 
 ```markdown
-@junie please resolve the merge conflicts
+@junify please resolve the merge conflicts
 ```
 
 Junie will automatically detect the conflicts and resolve them. **No additional configuration needed** - works with your basic Junie workflow.
@@ -138,7 +138,7 @@ jobs:
 ```
 
 **How it works**:
-- **Manual**: Ask Junie anytime via `@junie resolve conflicts` comment
+- **Manual**: Ask Junie anytime via `@junify resolve conflicts` comment
 - **Automatic**: With `resolve_conflicts: true`, Junie monitors pushes and auto-resolves conflicts in open PRs
 
 **Note**: The `resolve_conflicts: true` setting is only needed for automatic conflict detection. For manual resolution via comments, your basic Junie workflow is sufficient.
@@ -158,7 +158,7 @@ on:
 
 jobs:
   analyze:
-    if: contains(github.event.comment.body, '@junie')
+    if: contains(github.event.comment.body, '@junify')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -214,7 +214,7 @@ on:
 
 jobs:
   junie:
-    if: contains(github.event.comment.body, '@junie') || contains(github.event.issue.body, '@junie')
+    if: contains(github.event.comment.body, '@junify') || contains(github.event.issue.body, '@junify')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -243,11 +243,11 @@ jobs:
 
 **Example conversation**:
 ```markdown
-User: @junie please add input validation
+User: @junify please add input validation
 [Junie creates comment: "Working on it..."]
 [Junie updates same comment: "✓ Done! Added validation to forms.ts"]
 
-User: @junie also add unit tests
+User: @junify also add unit tests
 [Junie updates same comment: "Working on it..."]
 [Junie updates same comment: "✓ Done! Added tests to forms.test.ts"]
 ```
@@ -259,11 +259,11 @@ User: @junie also add unit tests
 
 ```markdown
 # Thread 1: On line 42 in auth.ts
-User: @junie add error handling here
+User: @junify add error handling here
 [Junie updates comment in Thread 1]
 
 # Thread 2: On line 156 in database.ts
-User: @junie optimize this query
+User: @junify optimize this query
 [Junie updates comment in Thread 2 - independent from Thread 1]
 ```
 
@@ -361,7 +361,7 @@ jobs:
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `trigger_phrase` | Phrase to activate Junie in comments/issues | `@junie` |
+| `trigger_phrase` | Phrase to activate Junie in comments/issues | `@junify` |
 | `assignee_trigger` | Username that triggers when assigned | - |
 | `label_trigger` | Label that triggers the action | `junie` |
 
@@ -388,7 +388,7 @@ jobs:
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `resolve_conflicts` | Enable automatic conflict detection (not needed for manual `@junie` resolution) | `false` |
+| `resolve_conflicts` | Enable automatic conflict detection (not needed for manual `@junify` resolution) | `false` |
 | `silent_mode` | Run Junie without comments, branch creation, or commits - only prepare data and output results | `false` |
 | `use_single_comment` | Update a single comment for all runs instead of creating new comments each time | `false` |
 
@@ -455,7 +455,7 @@ permissions:
 ### Respond to PR Comments
 
 ```markdown
-**User comment on PR**: @junie can you add error handling to the database connection?
+**User comment on PR**: @junify can you add error handling to the database connection?
 
 **Junie response**:
 - Analyzes the PR context
@@ -469,7 +469,7 @@ permissions:
 ```markdown
 **Issue title**: Bug: Login form doesn't validate email format
 
-**Issue body**: @junie please fix this
+**Issue body**: @junify please fix this
 
 **Junie action**:
 - Creates branch `junie/issue-123`
@@ -482,7 +482,7 @@ permissions:
 
 #### Manual Resolution (Simple)
 ```markdown
-**User comment on PR #42**: @junie please resolve the merge conflicts
+**User comment on PR #42**: @junify please resolve the merge conflicts
 
 **Junie action**:
 - Detects conflicts in the PR
@@ -509,7 +509,7 @@ permissions:
 
 - **Permission Validation**: Only users with write access can trigger Junie (by default)
 - **Human Actor Verification**: Blocks bot-initiated workflows to prevent loops
-  - ⚠️ **Note**: This verification only applies to interactive events (comments, issues, PRs with `@junie` mentions)
+  - ⚠️ **Note**: This verification only applies to interactive events (comments, issues, PRs with `@junify` mentions)
   - Automated workflows (scheduled, workflow_dispatch, workflow_run) run without actor verification
   - For automated workflows, ensure proper workflow permissions and conditions to prevent unintended execution
 - **Token Management**: Supports custom GitHub tokens for enhanced security
@@ -519,7 +519,7 @@ permissions:
 
 ### Action Doesn't Trigger
 
-- Verify the trigger phrase matches (default: `@junie`)
+- Verify the trigger phrase matches (default: `@junify`)
 - Check workflow `if:` condition includes your event type
 - Ensure actor has write permissions
 - Review GitHub Actions logs for validation errors

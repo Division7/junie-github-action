@@ -8,9 +8,9 @@ inputs:
   trigger_phrase:
     description: "The trigger phrase to look for in comments or issue body"
     required: false
-    default: "@junie"
+    default: "@junify"
   assignee_trigger:
-    description: "The assignee username that triggers the action (e.g. @junie)"
+    description: "The assignee username that triggers the action (e.g. @junify)"
     required: false
   label_trigger:
     description: "The label that triggers the action (e.g. junie)"

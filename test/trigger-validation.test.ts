@@ -16,7 +16,7 @@ import type {IssueCommentEvent, IssuesEvent, PullRequestEvent, PullRequestReview
 describe("Trigger Validation", () => {
   describe("escapeRegExp", () => {
     test("should escape special regex characters", () => {
-      expect(escapeRegExp("@junie")).toBe("@junie");
+      expect(escapeRegExp("@junify")).toBe("@junify");
       expect(escapeRegExp("$test")).toBe("\\$test");
       expect(escapeRegExp("test.")).toBe("test\\.");
       expect(escapeRegExp("[bot]")).toBe("\\[bot\\]");
@@ -45,10 +45,10 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "assigned",
-          inputs: { assigneeTrigger: "@junie-bot" },
+          inputs: { assigneeTrigger: "@junify-bot" },
           payload: {
             ...mockIssueAssignedContext.payload,
-            assignee: { login: "junie-bot" },
+            assignee: { login: "junify-bot" },
           },
         });
 
@@ -133,12 +133,12 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueOpenedContext.payload,
             issue: {
               ...(mockIssueOpenedContext.payload as IssuesEvent).issue,
-              body: "@junie please help with this bug",
+              body: "@junify please help with this bug",
               title: "Bug report",
             },
           },
@@ -151,13 +151,13 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueOpenedContext.payload,
             issue: {
               ...(mockIssueOpenedContext.payload as IssuesEvent).issue,
               body: "Description here",
-              title: "@junie Fix login bug",
+              title: "@junify Fix login bug",
             },
           },
         });
@@ -169,12 +169,12 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueOpenedContext.payload,
             issue: {
               ...(mockIssueOpenedContext.payload as IssuesEvent).issue,
-              body: "@junie help",
+              body: "@junify help",
             },
           },
         });
@@ -186,12 +186,12 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueOpenedContext.payload,
             issue: {
               ...(mockIssueOpenedContext.payload as IssuesEvent).issue,
-              body: "Please help @junie",
+              body: "Please help @junify",
             },
           },
         });
@@ -201,19 +201,19 @@ describe("Trigger Validation", () => {
 
       test("should trigger with punctuation after phrase", () => {
         const testCases = [
-          "@junie, can you help?",
-          "@junie. Fix this bug",
-          "@junie! Please review",
-          "@junie? What do you think",
-          "@junie; also check this",
-          "@junie: review needed",
+          "@junify, can you help?",
+          "@junify. Fix this bug",
+          "@junify! Please review",
+          "@junify? What do you think",
+          "@junify; also check this",
+          "@junify: review needed",
         ];
 
         testCases.forEach((body) => {
           const context = createMockContext({
             eventName: "issues",
             eventAction: "opened",
-            inputs: { triggerPhrase: "@junie" },
+            inputs: { triggerPhrase: "@junify" },
             payload: {
               ...mockIssueOpenedContext.payload,
               issue: {
@@ -229,16 +229,16 @@ describe("Trigger Validation", () => {
 
       test("should not trigger when phrase is part of another word", () => {
         const testCases = [
-          "email@junie.com",
-          "user@junie-test",
-          "contact@juniebot.io",
+          "email@junify.com",
+          "user@junify-test",
+          "contact@junifybot.io",
         ];
 
         testCases.forEach((body) => {
           const context = createMockContext({
             eventName: "issues",
             eventAction: "opened",
-            inputs: { triggerPhrase: "@junie" },
+            inputs: { triggerPhrase: "@junify" },
             payload: {
               ...mockIssueOpenedContext.payload,
               issue: {
@@ -256,7 +256,7 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueOpenedContext.payload,
             issue: {
@@ -274,7 +274,7 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueOpenedContext.payload,
             issue: {
@@ -292,7 +292,7 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issues",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueOpenedContext.payload,
             issue: {
@@ -312,12 +312,12 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "pull_request",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockPullRequestOpenedContext.payload,
             pull_request: {
               ...(mockPullRequestOpenedContext.payload as PullRequestEvent).pull_request,
-              body: "@junie please review this PR",
+              body: "@junify please review this PR",
             },
           },
         });
@@ -329,12 +329,12 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "pull_request",
           eventAction: "opened",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockPullRequestOpenedContext.payload,
             pull_request: {
                 ...(mockPullRequestOpenedContext.payload as PullRequestEvent).pull_request,
-              title: "@junie Add new feature",
+              title: "@junify Add new feature",
               body: "Description",
             },
           },
@@ -365,7 +365,7 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "issue_comment",
           eventAction: "created",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockIssueCommentContext.payload,
             comment: {
@@ -420,13 +420,13 @@ describe("Trigger Validation", () => {
         const context = createMockContext({
           eventName: "pull_request_review",
           eventAction: "edited",
-          inputs: { triggerPhrase: "@junie" },
+          inputs: { triggerPhrase: "@junify" },
           payload: {
             ...mockPullRequestReviewContext.payload,
             action: "edited",
             review: {
               ...(mockPullRequestReviewContext.payload as PullRequestReviewEvent).review,
-              body: "@junie check this again",
+              body: "@junify check this again",
             },
           },
         });

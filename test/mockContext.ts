@@ -16,7 +16,7 @@ const defaultInputs = {
     junieWorkingDir: "/tmp/junie-work",
     appToken: "test-token",
     prompt: "",
-    triggerPhrase: "@junie",
+    triggerPhrase: "@junify",
     assigneeTrigger: "",
     labelTrigger: "junie",
     baseBranch: "main",
@@ -132,7 +132,7 @@ export const mockIssueOpenedContext: ParsedGitHubContext = createMockContext({
         issue: {
             number: 42,
             title: "Test issue",
-            body: "@junie please help with this bug",
+            body: "@junify please help with this bug",
             html_url: "https://github.com/test-owner/test-repo/issues/42",
             user: mockUser,
             state: "open",
@@ -216,7 +216,7 @@ export const mockIssueCommentContext: ParsedGitHubContext = createMockContext({
         },
         comment: {
             id: 999,
-            body: "@junie can you help with this?",
+            body: "@junify can you help with this?",
             html_url: "https://github.com/test-owner/test-repo/issues/55#issuecomment-999",
             user: mockUser,
             created_at: "2024-01-15T11:00:00Z",
@@ -250,7 +250,7 @@ export const mockPullRequestCommentContext: ParsedGitHubContext = createMockCont
         },
         comment: {
             id: 888,
-            body: "@junie review this code",
+            body: "@junify review this code",
             html_url: "https://github.com/test-owner/test-repo/pull/100#issuecomment-888",
             user: mockUser,
             created_at: "2024-01-15T11:00:00Z",
@@ -271,7 +271,7 @@ export const mockPullRequestOpenedContext: ParsedGitHubContext = createMockConte
         pull_request: {
             number: 200,
             title: "Add new feature",
-            body: "@junie please review",
+            body: "@junify please review",
             html_url: "https://github.com/test-owner/test-repo/pull/200",
             state: "open",
             user: mockUser,
@@ -300,7 +300,7 @@ export const mockPullRequestReviewContext: ParsedGitHubContext = createMockConte
         action: "submitted",
         review: {
             id: 777,
-            body: "@junie fix these issues",
+            body: "@junify fix these issues",
             html_url: "https://github.com/test-owner/test-repo/pull/200#pullrequestreview-777",
             user: mockUser,
             state: "changes_requested",
@@ -338,7 +338,7 @@ export const mockPullRequestReviewCommentContext: ParsedGitHubContext = createMo
         action: "created",
         comment: {
             id: 666,
-            body: "@junie this looks wrong",
+            body: "@junify this looks wrong",
             html_url: "https://github.com/test-owner/test-repo/pull/200#discussion_r666",
             user: mockUser,
             path: "src/index.ts",

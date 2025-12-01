@@ -29,7 +29,7 @@ describe("prepareJunieTask", () => {
                 junieWorkingDir: "/tmp",
                 appToken: "token",
                 prompt: "",
-                triggerPhrase: "@junie",
+                triggerPhrase: "@junify",
                 assigneeTrigger: "",
                 labelTrigger: "",
                 allowedMcpServers: ""
@@ -45,7 +45,7 @@ describe("prepareJunieTask", () => {
                 },
                 comment: {
                     id: 1,
-                    body: "@junie help",
+                    body: "@junify help",
                     user: {login: "commenter"}
                 },
                 repository: {
@@ -227,7 +227,7 @@ describe("prepareJunieTask", () => {
             expect(result.textTask).toBeDefined();
             expect(result.textTask?.text).toContain("User @commenter mentioned you");
             expect(result.textTask?.text).toContain("#123 Test Issue");
-            expect(result.textTask?.text).toContain("@junie help");
+            expect(result.textTask?.text).toContain("@junify help");
             expect(result.textTask?.text).toContain("### ISSUE:");
         });
     });
@@ -418,7 +418,7 @@ describe("prepareJunieTask", () => {
                     },
                     comment: {
                         id: 1,
-                        body: "@junie resolve conflicts",
+                        body: "@junify resolve conflicts",
                         user: {login: "user"}
                     },
                     repository: {

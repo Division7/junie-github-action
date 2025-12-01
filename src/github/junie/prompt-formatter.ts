@@ -7,6 +7,33 @@ import {
     GitHubTimelineData, GitHubTimelineEventData
 } from "../api/github-data";
 
+/**
+ * Complete Pull Request context data (returned from fetchPullRequestData)
+ */
+export interface PullRequestContextData {
+    issue: GitHubIssueData;
+    timeline: GitHubTimelineData;
+    reviews: GitHubReviewsData;
+    prDetails?: GitHubPullRequestDetails;
+    changedFiles?: GitHubFileChange[];
+}
+
+/**
+ * Complete Issue context data (returned from fetchIssueData)
+ */
+export interface IssueContextData {
+    issue: GitHubIssueData;
+    timeline: GitHubTimelineData;
+}
+
+/**
+ * Comment data
+ */
+export interface CommentData {
+    body: string;
+    author: string;
+}
+
 export class GitHubPromptFormatter {
 
     private formatPRContext(pr: GitHubPullRequestDetails): string {
@@ -201,98 +228,95 @@ ${this.presentTimeline(timeline)}`;
     }
 
     formatPullRequestCommentPrompt(
-        issue: GitHubIssueData,
-        timeline: GitHubTimelineData,
-        reviews: GitHubReviewsData,
-        commentBody: string,
-        commentAuthor: string,
-        prDetails?: GitHubPullRequestDetails,
-        changedFiles?: GitHubFileChange[]
+        prData: PullRequestContextData,
+        comment: CommentData,
+        basePrompt?: string
     ): string {
-        return `User @${commentAuthor} mentioned you in the comment on pull request '#${issue.number} ${issue.title}'.
+        const prompt = basePrompt || `User @${comment.author} mentioned you in the comment on pull request '#${prData.issue.number} ${prData.issue.title}'.
 Given the following user comment (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
-${commentBody}
-</issue_description>
+${comment.body}
+</issue_description>`;
+
+        return `${prompt}
 
 
 See below the whole PR for information:
-${this.presentPullRequest(issue, reviews, timeline, prDetails, changedFiles)}`;
+${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}`;
     }
 
     formatPullRequestReviewCommentPrompt(
-        issue: GitHubIssueData,
-        timeline: GitHubTimelineData,
-        reviews: GitHubReviewsData,
-        commentBody: string,
-        commentAuthor: string,
-        prDetails?: GitHubPullRequestDetails,
-        changedFiles?: GitHubFileChange[]
+        prData: PullRequestContextData,
+        comment: CommentData,
+        basePrompt?: string
     ): string {
-        return `User @${commentAuthor} mentioned you in the review comment on pull request '#${issue.number} ${issue.title}'.
+        const prompt = basePrompt || `User @${comment.author} mentioned you in the review comment on pull request '#${prData.issue.number} ${prData.issue.title}'.
 Given the following user comment (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
-${commentBody}
-</issue_description>
+${comment.body}
+</issue_description>`;
+
+        return `${prompt}
 
 
 See below the whole PR for information:
-${this.presentPullRequest(issue, reviews, timeline, prDetails, changedFiles)}`;
+${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}`;
     }
 
     formatPullRequestReviewPrompt(
+        prData: PullRequestContextData,
         review: GitHubReviewData,
-        issue: GitHubIssueData,
-        timeline: GitHubTimelineData,
-        reviews: GitHubReviewsData,
-        prDetails?: GitHubPullRequestDetails,
-        changedFiles?: GitHubFileChange[]
+        basePrompt?: string
     ): string {
-        return `User @${review.user.login} mentioned you in the review on pull request '#${issue.number} ${issue.title}'.
+        const prompt = basePrompt || `User @${review.user.login} mentioned you in the review on pull request '#${prData.issue.number} ${prData.issue.title}'.
 Given the following user review (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
-${this.presentReview(review, reviews.threads)}
-</issue_description>
+${this.presentReview(review, prData.reviews.threads)}
+</issue_description>`;
+
+        return `${prompt}
 
 
 See below the whole PR for information:
-${this.presentPullRequest(issue, reviews, timeline, prDetails, changedFiles)}`;
+${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}`;
     }
 
     formatIssueCommentPrompt(
-        issue: GitHubIssueData,
-        timeline: GitHubTimelineData,
-        commentBody: string,
-        commentAuthor: string
+        issueData: IssueContextData,
+        comment: CommentData,
+        basePrompt?: string
     ): string {
-        return `User @${commentAuthor} mentioned you in the comment on GitHub issue '#${issue.number} ${issue.title}'.
+        const prompt = basePrompt || `User @${comment.author} mentioned you in the comment on GitHub issue '#${issueData.issue.number} ${issueData.issue.title}'.
 Given the following user comment (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
-${commentBody}
-</issue_description>
+${comment.body}
+</issue_description>`;
+
+        return `${prompt}
 
 
 See below the whole GitHub issue for information:
-${this.presentIssue(issue, timeline)}`;
+${this.presentIssue(issueData.issue, issueData.timeline)}`;
     }
 
-    formatIssuePrompt(issue: GitHubIssueData, timeline: GitHubTimelineData): string {
-        return `Given the following issue description \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
+    formatIssuePrompt(issueData: IssueContextData, basePrompt?: string): string {
+        const prompt = basePrompt || `Given the following issue description \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?`;
+
+        return `${prompt}
 <issue_description>
-${this.presentIssue(issue, timeline)}
+${this.presentIssue(issueData.issue, issueData.timeline)}
 </issue_description>`;
     }
 
     formatPullRequestPrompt(
-        issue: GitHubIssueData,
-        timeline: GitHubTimelineData,
-        reviews: GitHubReviewsData,
-        prDetails?: GitHubPullRequestDetails,
-        changedFiles?: GitHubFileChange[]
+        prData: PullRequestContextData,
+        basePrompt?: string
     ): string {
-        return `Given the following pull request \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
+        const prompt = basePrompt || `Given the following pull request \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?`;
+
+        return `${prompt}
 <issue_description>
-${this.presentPullRequest(issue, reviews, timeline, prDetails, changedFiles)}
+${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}
 </issue_description>`;
     }
 }

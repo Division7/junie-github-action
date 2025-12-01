@@ -21,9 +21,8 @@ import {GraphQLGitHubDataFetcher} from "../api/graphql-data-fetcher";
 async function setValidatedTextTask(junieTask: JunieTask, text: string, taskType: string): Promise<void> {
     // Download attachments and rewrite URLs in the text
     const textWithLocalAttachments = await downloadAttachmentsAndRewriteText(text);
-    const newText = (junieTask.textTask?.text || "") + "\n" + textWithLocalAttachments;
-    validateInputSize(newText, taskType);
-    junieTask.textTask = {text: newText};
+    validateInputSize(textWithLocalAttachments, taskType);
+    junieTask.textTask = {text: textWithLocalAttachments};
 }
 
 export async function prepareJunieTask(
@@ -39,24 +38,23 @@ export async function prepareJunieTask(
     const fetcher = new GraphQLGitHubDataFetcher(octokit);
     const formatter = new GitHubPromptFormatter();
 
-    if (context.inputs.prompt) {
-        await setValidatedTextTask(junieTask, context.inputs.prompt, "user-prompt");
-    }
+    // Store the custom prompt to be used as base prompt in formatters
+    const customPrompt = context.inputs.prompt || undefined;
 
     // Handle issue comment (not on PR)
     if (isIssueCommentEvent(context) && !context.isPR) {
         const issueNumber = context.payload.issue.number;
-        const commentBody = context.payload.comment.body;
-        const commentAuthor = context.payload.comment.user.login;
 
         // Single GraphQL query for all issue data
-        const {issue, timeline} = await fetcher.fetchIssueData(owner, repo, issueNumber);
+        const issueData = await fetcher.fetchIssueData(owner, repo, issueNumber);
 
         const promptText = formatter.formatIssueCommentPrompt(
-            issue,
-            timeline,
-            commentBody,
-            commentAuthor
+            issueData,
+            {
+                body: context.payload.comment.body,
+                author: context.payload.comment.user.login
+            },
+            customPrompt
         );
         await setValidatedTextTask(junieTask, promptText, "issue-comment");
     }
@@ -66,33 +64,26 @@ export async function prepareJunieTask(
         const issueNumber = context.payload.issue.number;
 
         // Single GraphQL query for all issue data
-        const {issue, timeline} = await fetcher.fetchIssueData(owner, repo, issueNumber);
+        const issueData = await fetcher.fetchIssueData(owner, repo, issueNumber);
 
-        const promptText = formatter.formatIssuePrompt(issue, timeline);
+        const promptText = formatter.formatIssuePrompt(issueData, customPrompt);
         await setValidatedTextTask(junieTask, promptText, "issue");
     }
 
     // Handle PR comment
     if (isIssueCommentEvent(context) && context.isPR) {
         const pullNumber = context.payload.issue.number;
-        const commentBody = context.payload.comment.body;
-        const commentAuthor = context.payload.comment.user.login;
 
         // Single GraphQL query for all PR data - much faster than 5 REST calls!
-        const {issue, timeline, reviews, prDetails, changedFiles} = await fetcher.fetchPullRequestData(
-            owner,
-            repo,
-            pullNumber
-        );
+        const prData = await fetcher.fetchPullRequestData(owner, repo, pullNumber);
 
         const promptText = formatter.formatPullRequestCommentPrompt(
-            issue,
-            timeline,
-            reviews,
-            commentBody,
-            commentAuthor,
-            prDetails,
-            changedFiles
+            prData,
+            {
+                body: context.payload.comment.body,
+                author: context.payload.comment.user.login
+            },
+            customPrompt
         );
         await setValidatedTextTask(junieTask, promptText, "pr-comment");
     }
@@ -103,25 +94,18 @@ export async function prepareJunieTask(
         const reviewId = context.payload.review.id;
 
         // Single GraphQL query for all PR data
-        const {issue, timeline, reviews, prDetails, changedFiles} = await fetcher.fetchPullRequestData(
-            owner,
-            repo,
-            pullNumber
-        );
+        const prData = await fetcher.fetchPullRequestData(owner, repo, pullNumber);
 
         // Find the specific review from the fetched reviews
-        const review = reviews.reviews.find(r => r.id === reviewId);
+        const review = prData.reviews.reviews.find(r => r.id === reviewId);
         if (!review) {
             throw new Error(`Review ${reviewId} not found in PR ${pullNumber}`);
         }
 
         const promptText = formatter.formatPullRequestReviewPrompt(
+            prData,
             review,
-            issue,
-            timeline,
-            reviews,
-            prDetails,
-            changedFiles
+            customPrompt
         );
         await setValidatedTextTask(junieTask, promptText, "pr-review");
     }
@@ -129,24 +113,17 @@ export async function prepareJunieTask(
     // Handle PR review comment
     if (isPullRequestReviewCommentEvent(context)) {
         const pullNumber = context.payload.pull_request.number;
-        const commentBody = context.payload.comment.body;
-        const commentAuthor = context.payload.comment.user.login;
 
         // Single GraphQL query for all PR data
-        const {issue, timeline, reviews, prDetails, changedFiles} = await fetcher.fetchPullRequestData(
-            owner,
-            repo,
-            pullNumber
-        );
+        const prData = await fetcher.fetchPullRequestData(owner, repo, pullNumber);
 
         const promptText = formatter.formatPullRequestReviewCommentPrompt(
-            issue,
-            timeline,
-            reviews,
-            commentBody,
-            commentAuthor,
-            prDetails,
-            changedFiles
+            prData,
+            {
+                body: context.payload.comment.body,
+                author: context.payload.comment.user.login
+            },
+            customPrompt
         );
         await setValidatedTextTask(junieTask, promptText, "pr-review-comment");
     }
@@ -156,20 +133,15 @@ export async function prepareJunieTask(
         const pullNumber = context.payload.pull_request.number;
 
         // Single GraphQL query for all PR data
-        const {issue, timeline, reviews, prDetails, changedFiles} = await fetcher.fetchPullRequestData(
-            owner,
-            repo,
-            pullNumber
-        );
+        const prData = await fetcher.fetchPullRequestData(owner, repo, pullNumber);
 
-        const promptText = formatter.formatPullRequestPrompt(
-            issue,
-            timeline,
-            reviews,
-            prDetails,
-            changedFiles
-        );
+        const promptText = formatter.formatPullRequestPrompt(prData, customPrompt);
         await setValidatedTextTask(junieTask, promptText, "pull-request");
+    }
+
+    // If no event-specific prompt was set but custom prompt exists, use it directly
+    if (!junieTask.textTask && customPrompt) {
+        await setValidatedTextTask(junieTask, customPrompt, "user-prompt");
     }
 
     if (context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)) {
