@@ -32,10 +32,6 @@ export async function prepare({
 
     await gitAuth(context, tokenConfig)
 
-    if (isEntityContext(context)) {
-        await checkHumanActor(octokit.rest, context);
-    }
-
     await writeInitialFeedbackComment(octokit.rest, context);
 
     const branchInfo = await setupBranch(octokit, context);
@@ -78,7 +74,7 @@ async function shouldHandle(context: GitHubContext, octokit: Octokits): Promise<
         return await shouldResolveConflicts(context, octokit)
     }
 
-    return isEntityContext(context) && checkContainsTrigger(context);
+    return isEntityContext(context) && checkContainsTrigger(context) && checkHumanActor(octokit.rest, context);
 }
 
 

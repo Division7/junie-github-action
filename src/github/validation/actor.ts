@@ -17,7 +17,7 @@ import type {ParsedGitHubContext} from "../context";
 export async function checkHumanActor(
     octokit: Octokit,
     githubContext: ParsedGitHubContext,
-) {
+): Promise<boolean> {
     try {
         // Fetch actor information from GitHub API to determine their type (User, Bot)
         const {data: userData} = await octokit.users.getByUsername({
@@ -31,23 +31,18 @@ export async function checkHumanActor(
         if (actorType !== "User") {
             // Remove "[bot]" suffix for cleaner error message (e.g., "dependabot[bot]" -> "dependabot")
             const botName = githubContext.actor.toLowerCase().replace(/\[bot\]$/, "");
-            throw new Error(
+            console.error(
                 `❌ Workflow initiated by non-human actor: ${botName} (type: ${actorType}). ` +
                 `Junie can only be triggered by human users to prevent automation loops. ` +
                 `If you need automated workflows, use workflow_dispatch or scheduled events.`
             );
+            return false;
         }
 
         console.log(`✓ Verified human actor: ${githubContext.actor}`);
+        return true;
     } catch (error) {
-        // Re-throw bot detection errors immediately - these are expected validation failures
-        if (error instanceof Error && error.message.includes('non-human actor')) {
-            throw error;
-        }
-
-        // For API errors (rate limits, network issues), provide helpful debugging information
-        console.error(`Failed to verify actor ${githubContext.actor}:`, error);
-        throw new Error(
+        console.error(
             `❌ Failed to verify actor information for "${githubContext.actor}". ` +
             `This could be due to: \n` +
             `• GitHub API rate limits\n` +
@@ -55,5 +50,6 @@ export async function checkHumanActor(
             `• Network connectivity issues\n` +
             `Original error: ${error instanceof Error ? error.message : String(error)}`
         );
+        return false;
     }
 }
