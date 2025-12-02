@@ -348,3 +348,21 @@ export function isReferencedEventNode(node: GraphQLTimelineItemNode): node is Gr
 export function isCrossReferencedEventNode(node: GraphQLTimelineItemNode): node is GraphQLCrossReferencedEventNode {
     return node.__typename === "CrossReferencedEvent";
 }
+
+// Query to get current authenticated user/bot information
+// Works for both PATs and GitHub App tokens
+export const VIEWER_QUERY = `
+  query {
+    viewer {
+      login
+      databaseId
+    }
+  }
+`;
+
+export interface ViewerQueryResponse {
+    viewer: {
+        login: string;
+        databaseId: number;
+    };
+}

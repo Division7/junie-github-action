@@ -4,6 +4,7 @@ import {$} from "bun";
 import type {Octokits} from "../api/client";
 import type {GitHubTokenConfig} from "../token";
 import {GITHUB_ACTIONS_BOT} from "../../constants/github";
+import {VIEWER_QUERY, type ViewerQueryResponse} from "../api/queries";
 
 interface GitUser {
     login: string;
@@ -41,29 +42,58 @@ export async function getTokenOwnerInfo(octokit: Octokits, tokenConfig: GitHubTo
 
         // For custom tokens (PATs, GitHub App tokens), fetch owner information from API
         console.log("Using custom token - fetching token owner info");
-        const { data } = await octokit.rest.users.getAuthenticated();
 
-        console.log(`Token owner: ${data.login} (ID: ${data.id}, Type: ${data.type})`);
+        try {
+            // Try to get user info (works for PATs)
+            const {data} = await octokit.rest.users.getAuthenticated();
 
-        // Map GitHub API types to our internal type system
-        // GET /user can only return: "User" or "Bot"
-        let type: TokenOwner["type"];
-        if (data.type === "Bot") {
-            type = "Bot";
-        } else if (data.type === "User") {
-            type = "User";
-        } else {
-            // Unexpected type from GitHub API (future-proofing)
-            // This should never happen, but if GitHub adds new types, treat as User
-            console.warn(`⚠️  Unexpected token type from GitHub API: "${data.type}". Treating as User.`);
-            type = "User";
+            console.log(`Token owner: ${data.login} (ID: ${data.id}, Type: ${data.type})`);
+
+            // Map GitHub API types to our internal type system
+            let type: TokenOwner["type"]
+            if (data.type === "Bot") {
+                type = "Bot";
+            } else {
+                type = "User";
+            }
+
+            return {
+                login: data.login,
+                id: data.id,
+                type,
+            };
+        } catch (userError: any) {
+            // If /user fails with "Resource not accessible", this is likely a GitHub App token
+            // GitHub App tokens can't access /user endpoint
+            if (userError?.status === 403 || userError?.message?.includes('Resource not accessible')) {
+                console.log("⚠️  /user endpoint not accessible - trying GraphQL viewer for GitHub App token");
+
+                try {
+                    // Try GraphQL viewer query which works for GitHub App tokens
+                    const graphqlResponse = await octokit.graphql<ViewerQueryResponse>(VIEWER_QUERY);
+
+                    const { viewer } = graphqlResponse;
+                    console.log(`GitHub App token owner (via GraphQL): ${viewer.login} (ID: ${viewer.databaseId})`);
+
+                    return {
+                        login: viewer.login,
+                        id: viewer.databaseId,
+                        type: "Bot",
+                    };
+                } catch (graphqlError: any) {
+                    // Both /user and GraphQL failed - can't authenticate
+                    const graphqlErrorMessage = graphqlError?.message || String(graphqlError);
+                    console.error("GraphQL viewer query failed:", graphqlErrorMessage);
+
+                    throw new Error(
+                        `Both REST API (/user) and GraphQL (viewer) queries failed.\n\n` +
+                        `REST API error: ${userError?.message || userError}\n` +
+                        `GraphQL error: ${graphqlErrorMessage}`
+                    );
+                }
+            }
+            throw userError;
         }
-
-        return {
-            login: data.login,
-            id: data.id,
-            type,
-        };
     } catch (error) {
         console.error("Failed to fetch token owner info:", error);
 
@@ -74,7 +104,8 @@ export async function getTokenOwnerInfo(octokit: Octokits, tokenConfig: GitHubTo
             `❌ Unable to authenticate with provided GitHub token.\n\n` +
             `Possible causes:\n` +
             `• Token is invalid or expired\n` +
-            `• Token lacks required permissions (needs 'read:user' or 'user' scope)\n` +
+            `• Token lacks required permissions (needs 'read:user' or 'user' scope for PAT)\n` +
+            `• For GitHub App tokens: ensure proper installation permissions\n` +
             `• GitHub API is unavailable\n` +
             `• Rate limit exceeded\n\n` +
             `Original error: ${errorMessage}`
