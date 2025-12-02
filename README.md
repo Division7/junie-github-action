@@ -549,7 +549,7 @@ jobs:
 ## How It Works
 
 1. **Trigger Detection**: The action detects triggers (mentions, labels, assignments, or prompts)
-2. **Validation**: Verifies permissions and checks if the actor is human
+2. **Validation**: Verifies permissions and checks if the actor is human (when applicable - see Security Considerations)
 3. **Branch Management**: Creates or checks out the appropriate working branch
 4. **Task Preparation**: Converts GitHub context into a Junie-compatible task
 5. **MCP Setup**: Configures enabled MCP servers for enhanced capabilities
@@ -561,9 +561,14 @@ jobs:
 
 - **Permission Validation**: Only users with write access can trigger Junie (by default)
 - **Human Actor Verification**: Blocks bot-initiated workflows to prevent loops
-  - ⚠️ **Note**: This verification only applies to interactive events (comments, issues, PRs with `@junify` mentions)
-  - Automated workflows (scheduled, workflow_dispatch, workflow_run) run without actor verification
-  - For automated workflows, ensure proper workflow permissions and conditions to prevent unintended execution
+  - ✅ **Applies when**:
+    - Interactive events (issue comments, PR comments, PR reviews) with trigger phrase/label/assignee
+    - **AND** no custom `prompt` input is provided
+  - ❌ **Does NOT apply when**:
+    - Custom `prompt` input is provided (allows automation to trigger Junie)
+    - Automated workflows (scheduled, workflow_dispatch, workflow_run)
+    - Push events
+  - ⚠️ **Important**: When using custom prompts or automated workflows, ensure proper workflow permissions and conditions to prevent unintended execution
 - **Token Management**: Supports custom GitHub tokens for enhanced security
 - **Artifact Retention**: Working directory uploaded as artifact (7-day retention)
 

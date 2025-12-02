@@ -22,37 +22,38 @@ describe("Actor Validation", () => {
   });
 
   describe("checkHumanActor", () => {
-    test("should pass for human actor (type: User)", async () => {
+    test("should return true for human actor (type: User)", async () => {
       getUserByUsernameSpy = spyOn(mockOctokit.users, "getByUsername").mockResolvedValue({
         data: { type: "User", login: "contributor-user" },
       } as any);
 
-      expect(checkHumanActor(mockOctokit, mockIssueCommentContext)).resolves.toBeUndefined();
+      const result = await checkHumanActor(mockOctokit, mockIssueCommentContext);
+      expect(result).toBe(true);
       expect(getUserByUsernameSpy).toHaveBeenCalledWith({
         username: "contributor-user",
       });
     });
 
-    test("should reject bot actor (type: Bot)", async () => {
+    test("should return false for bot actor (type: Bot)", async () => {
       getUserByUsernameSpy = spyOn(mockOctokit.users, "getByUsername").mockResolvedValue({
         data: { type: "Bot", login: "dependabot[bot]" },
       } as any);
 
       const context = { ...mockIssueCommentContext, actor: "dependabot[bot]" };
 
-        expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(/Workflow initiated by non-human actor: dependabot/);
+      const result = await checkHumanActor(mockOctokit, context);
+      expect(result).toBe(false);
     });
 
-    test("should strip [bot] suffix from error message", async () => {
+    test("should return false for github-actions bot", async () => {
       getUserByUsernameSpy = spyOn(mockOctokit.users, "getByUsername").mockResolvedValue({
         data: { type: "Bot", login: "github-actions[bot]" },
       } as any);
 
       const context = { ...mockIssueCommentContext, actor: "github-actions[bot]" };
 
-        expect(checkHumanActor(mockOctokit, context)).rejects.toThrow(
-            /Workflow initiated by non-human actor: github-actions \(type: Bot\)/
-        );
+      const result = await checkHumanActor(mockOctokit, context);
+      expect(result).toBe(false);
     });
 
     test("should call GitHub API with correct username", async () => {
@@ -62,31 +63,32 @@ describe("Actor Validation", () => {
 
       const context = { ...mockIssueCommentContext, actor: "alice" };
 
-      await checkHumanActor(mockOctokit, context);
+      const result = await checkHumanActor(mockOctokit, context);
 
+      expect(result).toBe(true);
       expect(getUserByUsernameSpy).toHaveBeenCalledWith({
         username: "alice",
       });
       expect(getUserByUsernameSpy).toHaveBeenCalledTimes(1);
     });
 
-    test("should handle API errors gracefully", async () => {
+    test("should return false on API errors", async () => {
       getUserByUsernameSpy = spyOn(mockOctokit.users, "getByUsername").mockRejectedValue(
         new Error("API rate limit exceeded")
       );
 
-        expect(checkHumanActor(mockOctokit, mockIssueCommentContext)).rejects.toThrow(
-            "API rate limit exceeded"
-        );
+      const result = await checkHumanActor(mockOctokit, mockIssueCommentContext);
+      expect(result).toBe(false);
     });
 
-    test("should handle 404 user not found", async () => {
+    test("should return false on 404 user not found", async () => {
       getUserByUsernameSpy = spyOn(mockOctokit.users, "getByUsername").mockRejectedValue({
         status: 404,
         message: "Not Found",
       });
 
-        expect(checkHumanActor(mockOctokit, mockIssueCommentContext)).rejects.toThrow();
+      const result = await checkHumanActor(mockOctokit, mockIssueCommentContext);
+      expect(result).toBe(false);
     });
 
     test("should work with different actor names", async () => {
@@ -98,7 +100,8 @@ describe("Actor Validation", () => {
         } as any);
 
         const context = { ...mockIssueCommentContext, actor };
-          expect(checkHumanActor(mockOctokit, context)).resolves.toBeUndefined();
+        const result = await checkHumanActor(mockOctokit, context);
+        expect(result).toBe(true);
 
         getUserByUsernameSpy.mockRestore();
       }
