@@ -47,7 +47,7 @@ export async function prepareMcpConfig(
                 GITHUB_TOKEN: githubToken,
                 REPO_OWNER: owner,
                 REPO_NAME: repo,
-                HEAD_SHA: currentBranch,
+                HEAD_SHA: `refs/heads/${currentBranch}`,
             },
         };
     }
