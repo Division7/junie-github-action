@@ -8,12 +8,12 @@ describe("Trigger Validation - case insensitive", () => {
     const context = createMockContext({
       eventName: "issues",
       eventAction: "opened",
-      inputs: { triggerPhrase: "@junify" },
+      inputs: { triggerPhrase: "@junie-agent" },
       payload: {
         ...(createMockContext({eventName: "issues", eventAction: "opened"}).payload as any),
         issue: {
           ...((createMockContext({eventName: "issues", eventAction: "opened"}).payload as IssuesEvent).issue),
-          body: "@JuNiFy please help",
+          body: "@junie-agent please help",
           title: "regular title"
         }
       }
@@ -26,13 +26,13 @@ describe("Trigger Validation - case insensitive", () => {
     const context = createMockContext({
       eventName: "issues",
       eventAction: "opened",
-      inputs: { triggerPhrase: "@junify" },
+      inputs: { triggerPhrase: "@junie-agent" },
       payload: {
         ...(createMockContext({eventName: "issues", eventAction: "opened"}).payload as any),
         issue: {
           ...((createMockContext({eventName: "issues", eventAction: "opened"}).payload as IssuesEvent).issue),
           body: "no trigger here",
-          title: "@JuNiFy please"
+          title: "@junie-agent please"
         }
       }
     });
@@ -44,12 +44,12 @@ describe("Trigger Validation - case insensitive", () => {
     const context = createMockContext({
       eventName: "issue_comment",
       eventAction: "created",
-      inputs: { triggerPhrase: "@junify" },
+      inputs: { triggerPhrase: "@junie-agent" },
       payload: {
         ...(mockPullRequestCommentContext.payload as any),
         comment: {
           ...((mockPullRequestCommentContext.payload as IssueCommentEvent).comment),
-          body: "@JuNiFy could you check this?"
+          body: "@junie-agent could you check this?"
         }
       }
     });
