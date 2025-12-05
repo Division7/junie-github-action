@@ -4,13 +4,14 @@ import {OUTPUT_VARS} from "../constants/environment";
 import {mkdir, writeFile} from "fs/promises";
 import {join} from "path";
 import {homedir} from 'os';
+import {BranchInfo} from "../github/operations/branch";
 
 type PrepareConfigParams = {
     junieWorkingDir: string;
     githubToken: string;
     owner: string;
     repo: string;
-    currentBranch: string;
+    branchInfo: BranchInfo;
     allowedMcpServers: string[];
 };
 
@@ -22,7 +23,7 @@ export async function prepareMcpConfig(
         githubToken,
         owner,
         repo,
-        currentBranch,
+        branchInfo,
         allowedMcpServers,
     } = params;
 
@@ -36,6 +37,7 @@ export async function prepareMcpConfig(
 
 
     if (hasGHCheksServer) {
+        const head = branchInfo.prBaseBranch ? branchInfo.baseBranch : branchInfo.workingBranch
         baseMcpConfig.mcpServers.github_checks = {
             command: "bun",
             args: [
@@ -47,7 +49,7 @@ export async function prepareMcpConfig(
                 GITHUB_TOKEN: githubToken,
                 REPO_OWNER: owner,
                 REPO_NAME: repo,
-                HEAD_SHA: `heads/${currentBranch}`,
+                HEAD_SHA: `heads/${head}`,
             },
         };
     }
@@ -56,7 +58,7 @@ export async function prepareMcpConfig(
     core.setOutput(OUTPUT_VARS.EJ_MCP_CONFIG, configJsonString);
 
     // Create ~/.junie directory if it doesn't exist
-    const junieCMPDir = join(homedir(),'.junie', 'mcp');
+    const junieCMPDir = join(homedir(), '.junie', 'mcp');
     await mkdir(junieCMPDir, {recursive: true});
 
     // Write mcp.json config file to ~/.junie/mcp.json
