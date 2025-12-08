@@ -93,6 +93,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           next_version="${{ steps.next_version.outputs.next_version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           gh release create "$next_version" \
             --title "Release $next_version" \
