@@ -93,8 +93,6 @@ name: Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-  pull_request_review_comment:
-    types: [created]
 
 jobs:
   review:
@@ -331,8 +329,6 @@ jobs:
 name: Security Audit
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
     types: [opened, synchronize]
 
