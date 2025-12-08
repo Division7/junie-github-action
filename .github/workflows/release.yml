@@ -84,6 +84,8 @@ jobs:
 
       - name: Create and push tag
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           next_version="${{ steps.next_version.outputs.next_version }}"
           git tag -a "$next_version" -m "Release $next_version"
           git push origin "$next_version"
@@ -93,8 +95,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           next_version="${{ steps.next_version.outputs.next_version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           gh release create "$next_version" \
             --title "Release $next_version" \
