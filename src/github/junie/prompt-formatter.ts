@@ -1,29 +1,26 @@
 import {
-    GitHubCommentedEvent, GitHubCrossReferencedEvent,
-    GitHubFileChange,
-    GitHubIssueData,
-    GitHubPullRequestDetails, GitHubReferencedEvent, GitHubReviewData,
-    GitHubReviewsData, GitHubReviewThread,
-    GitHubTimelineData, GitHubTimelineEventData
-} from "../api/github-data";
+    GraphQLPullRequest,
+    GraphQLIssue,
+    GraphQLFileNode,
+    GraphQLReviewNode,
+    GraphQLTimelineItemNode,
+    isIssueCommentNode,
+    isReferencedEventNode,
+    isCrossReferencedEventNode
+} from "../api/queries";
 
 /**
  * Complete Pull Request context data (returned from fetchPullRequestData)
  */
 export interface PullRequestContextData {
-    issue: GitHubIssueData;
-    timeline: GitHubTimelineData;
-    reviews: GitHubReviewsData;
-    prDetails?: GitHubPullRequestDetails;
-    changedFiles?: GitHubFileChange[];
+    pullRequest: GraphQLPullRequest;
 }
 
 /**
  * Complete Issue context data (returned from fetchIssueData)
  */
 export interface IssueContextData {
-    issue: GitHubIssueData;
-    timeline: GitHubTimelineData;
+    issue: GraphQLIssue;
 }
 
 /**
@@ -36,173 +33,136 @@ export interface CommentData {
 
 export class GitHubPromptFormatter {
 
-    private formatPRContext(pr: GitHubPullRequestDetails): string {
+    private formatPRContext(pr: GraphQLPullRequest): string {
         return `PR #${pr.number}: ${pr.title}
-Author: @${pr.user.login}
+Author: @${pr.author?.login || 'ghost'}
 State: ${pr.state}
-Branch: ${pr.head.ref} -> ${pr.base.ref}
+Branch: ${pr.headRefName} -> ${pr.baseRefName}
 Additions: +${pr.additions} / Deletions: -${pr.deletions}
-Changed Files: ${pr.changed_files}
-Commits: ${pr.commits}`;
+Changed Files: ${pr.changedFiles}
+Commits: ${pr.commits.totalCount}`;
     }
 
-    private formatChangedFiles(files: GitHubFileChange[]): string {
+    private formatChangedFiles(files: GraphQLFileNode[]): string {
         if (files.length === 0) {
             return 'No files changed';
         }
 
         return files.map(file =>
-            `- ${file.filename} (${file.status}) +${file.additions}/-${file.deletions}`
+            `- ${file.path} (${file.changeType.toLowerCase()}) +${file.additions}/-${file.deletions}`
         ).join('\n');
     }
 
-    private presentPullRequest(
-        issue: GitHubIssueData,
-        reviews: GitHubReviewsData,
-        timeline: GitHubTimelineData,
-        prDetails?: GitHubPullRequestDetails,
-        changedFiles?: GitHubFileChange[]
-    ): string {
+    private presentPullRequest(pr: GraphQLPullRequest): string {
         let result = '';
 
-        if (prDetails) {
-            result += `### PULL REQUEST CONTEXT:\n${this.formatPRContext(prDetails)}\n\n`;
-        }
-
-        result += `### PULL REQUEST: ${issue.title} [${issue.state}]\n${issue.body || ''}\n\n`;
-
-        if (changedFiles) {
-            result += `### CHANGED FILES:\n${this.formatChangedFiles(changedFiles)}\n\n`;
-        }
-
-        result += `### PULL REQUEST REVIEWS:\n${this.presentReviews(reviews)}\n\n`;
-        result += `### PULL REQUEST TIMELINE:\n${this.presentTimeline(timeline)}`;
+        result += `### PULL REQUEST CONTEXT:\n${this.formatPRContext(pr)}\n\n`;
+        result += `### PULL REQUEST: ${pr.title} [${pr.state}]\n${pr.body || ''}\n\n`;
+        result += `### CHANGED FILES:\n${this.formatChangedFiles(pr.files.nodes)}\n\n`;
+        result += `### PULL REQUEST REVIEWS:\n${this.presentReviews(pr.reviews.nodes)}\n\n`;
+        result += `### PULL REQUEST TIMELINE:\n${this.presentTimeline(pr.timelineItems.nodes)}`;
 
         return result;
     }
 
-    private presentIssue(issue: GitHubIssueData, timeline: GitHubTimelineData): string {
+    private presentIssue(issue: GraphQLIssue): string {
         return `### ISSUE:
 ${issue.title} [${issue.state}]
 
 ${issue.body || ''}
 
 ### ISSUE TIMELINE:
-${this.presentTimeline(timeline)}`;
+${this.presentTimeline(issue.timelineItems.nodes)}`;
     }
 
-    private presentReviews(reviews: GitHubReviewsData): string {
+    private presentReviews(reviews: GraphQLReviewNode[]): string {
         const reviewTexts: string[] = [];
 
-        for (const review of reviews.reviews) {
-            const reviewText = this.presentReview(review, reviews.threads);
+        for (const review of reviews) {
+            const reviewText = this.presentReview(review);
             if (reviewText.trim()) {
                 reviewTexts.push(reviewText);
             }
         }
 
         if (reviewTexts.length === 0) {
-            return 'No unresolved review threads found.';
+            return 'No review comments found.';
         }
 
         return reviewTexts.join('\n\n');
     }
 
-    private presentReview(review: GitHubReviewData, threads: GitHubReviewThread[]): string {
-        // Find threads for this review
-        const reviewThreads = threads.filter(thread =>
-            thread.comments.some(c => c.pull_request_review_id === review.id)
-        );
-
-        if (reviewThreads.length === 0) {
+    private presentReview(review: GraphQLReviewNode): string {
+        if (review.comments.nodes.length === 0) {
             return '';
         }
 
-        const threadTexts: string[] = [];
+        const commentTexts: string[] = [];
 
-        for (const thread of reviewThreads) {
-            let firstComment = true;
-            const comments = thread.comments.sort(
-                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
+        // Sort comments by creation time
+        const sortedComments = [...review.comments.nodes].sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
 
-            for (const comment of comments) {
-                const author = comment.user.login;
-                const body = comment.body;
-                const createdAt = comment.created_at;
-                const path = comment.path;
-                const position = comment.position;
-                const diffHunk = comment.diff_hunk;
-                const isResolved = thread.isResolved;
-                const resolvedBy = thread.resolvedBy?.login;
+        for (const comment of sortedComments) {
+            const author = comment.author?.login || 'ghost';
+            const body = comment.body;
+            const createdAt = comment.createdAt;
+            const path = comment.path;
+            const position = comment.position;
+            const diffHunk = comment.diffHunk;
 
-                let commentText = '';
+            let commentText = `- ${createdAt} — ${path}:${position || ''} — Review comment by @${author}\n`;
 
-                if (firstComment) {
-                    firstComment = false;
-                    commentText += `- ${createdAt} — ${path}:${position || ''} — Review from by @${author}`;
-                    if (isResolved) {
-                        commentText += ` (already RESOLVED by @${resolvedBy})`;
-                    }
-                    commentText += '\n';
-
-                    if (diffHunk) {
-                        const diffLines = diffHunk
-                            .split('\n')
-                            .map(line => `  ${line}`)
-                            .join('\n');
-                        commentText += `  \`\`\`\`\n${diffLines}\n  \`\`\`\`\n`;
-                    }
-                }
-
-                const commentBody = body
+            if (diffHunk) {
+                const diffLines = diffHunk
                     .split('\n')
-                    .map(line => `    ${line}`)
+                    .map(line => `  ${line}`)
                     .join('\n');
-                commentText += `  * ${createdAt} — Comment from @${author}:\n${commentBody}`;
-
-                threadTexts.push(commentText);
+                commentText += `  \`\`\`\`\n${diffLines}\n  \`\`\`\`\n`;
             }
+
+            const commentBody = body
+                .split('\n')
+                .map(line => `  ${line}`)
+                .join('\n');
+            commentText += `${commentBody}`;
+
+            commentTexts.push(commentText);
         }
 
-        return threadTexts.join('\n');
+        return commentTexts.join('\n\n');
     }
 
-    private presentTimeline(timeline: GitHubTimelineData): string {
+    private presentTimeline(timelineNodes: GraphQLTimelineItemNode[]): string {
         const eventTexts: string[] = [];
 
-        for (const event of timeline.events) {
+        for (const node of timelineNodes) {
             let eventText: string | null = null;
 
-            if (this.isCommentedEvent(event)) {
-                const author = event.user.login;
-                const body = event.body;
-                const createdAt = event.created_at;
+            if (isIssueCommentNode(node)) {
+                const author = node.author?.login || 'ghost';
+                const body = node.body;
+                const createdAt = node.createdAt;
                 const bodyLines = body.split('\n').map(line => `  ${line}`).join('\n');
                 eventText = `* ${createdAt} — Comment from @${author}:\n${bodyLines}`;
-            } else if (this.isReferencedEvent(event)) {
-                const commitId = event.commit_id;
+            } else if (isReferencedEventNode(node)) {
+                const commitId = node.commit?.oid;
                 if (commitId) {
                     const hash = commitId.substring(0, 7);
-                    const createdAt = event.created_at;
+                    const createdAt = node.createdAt;
                     eventText = `* ${createdAt} — Commit: ${hash}`;
                 }
-            } else if (this.isCrossReferencedEvent(event)) {
-                const source = event.source;
-                const sourceIssue = source.issue;
-                if (sourceIssue) {
-                    const createdAt = event.created_at;
-                    const isPullRequest = !!sourceIssue.pull_request;
+            } else if (isCrossReferencedEventNode(node)) {
+                const source = node.source;
+                if (source) {
+                    const createdAt = node.createdAt;
+                    const isPullRequest = source.__typename === 'PullRequest';
 
-                    if (isPullRequest && sourceIssue.pull_request) {
-                        // Extract PR number from URL
-                        const prNumber = sourceIssue.number;
-                        eventText = `* ${createdAt} — Reference to PR #${prNumber}: ${sourceIssue.title}`;
-
-                        // Optionally fetch PR details if needed
-                        // This could be extended to include commits info like in Kotlin version
+                    if (isPullRequest) {
+                        eventText = `* ${createdAt} — Reference to PR #${source.number}: ${source.title}`;
                     } else {
-                        eventText = `* ${createdAt} — Reference to Issue #${sourceIssue.number}: ${sourceIssue.title}`;
+                        eventText = `* ${createdAt} — Reference to Issue #${source.number}: ${source.title}`;
                     }
                 }
             }
@@ -215,26 +175,16 @@ ${this.presentTimeline(timeline)}`;
         return eventTexts.join('\n\n');
     }
 
-    private isCommentedEvent(event: GitHubTimelineEventData): event is GitHubCommentedEvent {
-        return event.event === 'commented';
-    }
-
-    private isReferencedEvent(event: GitHubTimelineEventData): event is GitHubReferencedEvent {
-        return event.event === 'referenced';
-    }
-
-    private isCrossReferencedEvent(event: GitHubTimelineEventData): event is GitHubCrossReferencedEvent {
-        return event.event === 'cross-referenced';
-    }
-
     formatPullRequestCommentPrompt(
         prData: PullRequestContextData,
         comment: CommentData,
         basePrompt?: string
     ): string {
-        const prompt = basePrompt || `User @${comment.author} mentioned you in the comment on pull request '#${prData.issue.number} ${prData.issue.title}'.
+        const prompt = `User @${comment.author} mentioned you in the comment on pull request '#${prData.pullRequest.number} ${prData.pullRequest.title}'.
 Given the following user comment (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
+${basePrompt || ""}
+
 ${comment.body}
 </issue_description>`;
 
@@ -242,7 +192,7 @@ ${comment.body}
 
 
 See below the whole PR for information:
-${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}`;
+${this.presentPullRequest(prData.pullRequest)}`;
     }
 
     formatPullRequestReviewCommentPrompt(
@@ -250,9 +200,11 @@ ${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.
         comment: CommentData,
         basePrompt?: string
     ): string {
-        const prompt = basePrompt || `User @${comment.author} mentioned you in the review comment on pull request '#${prData.issue.number} ${prData.issue.title}'.
+        const prompt = `User @${comment.author} mentioned you in the review comment on pull request '#${prData.pullRequest.number} ${prData.pullRequest.title}'.
 Given the following user comment (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
+${basePrompt || ""}
+
 ${comment.body}
 </issue_description>`;
 
@@ -260,25 +212,27 @@ ${comment.body}
 
 
 See below the whole PR for information:
-${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}`;
+${this.presentPullRequest(prData.pullRequest)}`;
     }
 
     formatPullRequestReviewPrompt(
         prData: PullRequestContextData,
-        review: GitHubReviewData,
+        review: GraphQLReviewNode,
         basePrompt?: string
     ): string {
-        const prompt = basePrompt || `User @${review.user.login} mentioned you in the review on pull request '#${prData.issue.number} ${prData.issue.title}'.
+        const prompt = `User @${review.author?.login || 'ghost'} mentioned you in the review on pull request '#${prData.pullRequest.number} ${prData.pullRequest.title}'.
 Given the following user review (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
-${this.presentReview(review, prData.reviews.threads)}
+${basePrompt || ""}
+
+${this.presentReview(review)}
 </issue_description>`;
 
         return `${prompt}
 
 
 See below the whole PR for information:
-${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}`;
+${this.presentPullRequest(prData.pullRequest)}`;
     }
 
     formatIssueCommentPrompt(
@@ -286,9 +240,11 @@ ${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.
         comment: CommentData,
         basePrompt?: string
     ): string {
-        const prompt = basePrompt || `User @${comment.author} mentioned you in the comment on GitHub issue '#${issueData.issue.number} ${issueData.issue.title}'.
+        const prompt = `User @${comment.author} mentioned you in the comment on GitHub issue '#${issueData.issue.number} ${issueData.issue.title}'.
 Given the following user comment (aka user issue description) \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?
 <issue_description>
+${basePrompt || ""}
+
 ${comment.body}
 </issue_description>`;
 
@@ -296,15 +252,17 @@ ${comment.body}
 
 
 See below the whole GitHub issue for information:
-${this.presentIssue(issueData.issue, issueData.timeline)}`;
+${this.presentIssue(issueData.issue)}`;
     }
 
     formatIssuePrompt(issueData: IssueContextData, basePrompt?: string): string {
-        const prompt = basePrompt || `Given the following issue description \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?`;
+        const prompt = `Given the following issue description \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?`;
 
         return `${prompt}
 <issue_description>
-${this.presentIssue(issueData.issue, issueData.timeline)}
+${basePrompt || ""}
+
+${this.presentIssue(issueData.issue)}
 </issue_description>`;
     }
 
@@ -312,11 +270,13 @@ ${this.presentIssue(issueData.issue, issueData.timeline)}
         prData: PullRequestContextData,
         basePrompt?: string
     ): string {
-        const prompt = basePrompt || `Given the following pull request \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?`;
+        const prompt = `Given the following pull request \`<issue_description>\`, could you help me in implementing the necessary changes to meet the specified requirements?`;
 
         return `${prompt}
 <issue_description>
-${this.presentPullRequest(prData.issue, prData.reviews, prData.timeline, prData.prDetails, prData.changedFiles)}
+${basePrompt || ""}
+
+${this.presentPullRequest(prData.pullRequest)}
 </issue_description>`;
     }
 }

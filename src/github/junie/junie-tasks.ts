@@ -97,7 +97,7 @@ export async function prepareJunieTask(
         const prData = await fetcher.fetchPullRequestData(owner, repo, pullNumber);
 
         // Find the specific review from the fetched reviews
-        const review = prData.reviews.reviews.find(r => r.id === reviewId);
+        const review = prData.pullRequest.reviews.nodes.find(r => r.databaseId === reviewId);
         if (!review) {
             throw new Error(`Review ${reviewId} not found in PR ${pullNumber}`);
         }
