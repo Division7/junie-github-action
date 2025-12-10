@@ -176,7 +176,7 @@ Each recipe includes complete workflows, prompts, and configuration examples you
 | `resolve_conflicts` | Enable automatic conflict detection (not needed for manual `@junie-agent` resolution) | `false` |
 | `silent_mode` | Run Junie without comments, branch creation, or commits - only prepare data and output results | `false` |
 | `use_single_comment` | Update a single comment for all runs instead of creating new comments each time | `false` |
-| `use_structured_prompt` | Use the new structured prompt format with XML tags for better organization | `false` |
+| `use_structured_prompt` | Use the new structured prompt format with XML tags for better organization | `true`  |
 
 #### Authentication
 

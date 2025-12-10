@@ -38,7 +38,7 @@ inputs:
   use_structured_prompt:
     description: "Use the new structured prompt format with XML tags for better organization"
     required: false
-    default: "false"
+    default: "true"
 
   # Junie configuration
   prompt:
