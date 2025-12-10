@@ -16,6 +16,8 @@ import {GitHubPromptFormatter} from "./prompt-formatter";
 import {validateInputSize} from "../validation/input-size";
 import {downloadAttachmentsAndRewriteText} from "./attachment-downloader";
 import {GraphQLGitHubDataFetcher} from "../api/graphql-data-fetcher";
+import {CliInput} from "./types/junie";
+
 
 async function getValidatedTextTask(text: string, taskType: string): Promise<string> {
     // Download attachments and rewrite URLs in the text
@@ -28,7 +30,7 @@ export async function prepareJunieTask(
     context: GitHubContext,
     branchInfo: BranchInfo,
     octokit: Octokits
-) {
+): Promise<CliInput> {
     const owner = context.payload.repository.owner.login;
     const repo = context.payload.repository.name;
 
@@ -37,7 +39,21 @@ export async function prepareJunieTask(
     let triggerTime: string | undefined;
 
     const customPrompt = context.inputs.prompt || undefined;
-    let junieTask: string | undefined = customPrompt
+    let taskText: string | undefined = customPrompt
+    let cliInput: CliInput;
+
+    const isMergeTask = context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP);
+    if (isMergeTask) {
+        // For merge tasks, use mergeTask field
+        const targetBranch = branchInfo.prBaseBranch || branchInfo.baseBranch;
+        cliInput = {
+            mergeTask: {
+                branch: targetBranch
+            }
+        };
+        console.log(`Creating merge task for branch: ${targetBranch}`);
+        return cliInput;
+    }
 
     // Handle issue comment (not on PR)
     if (isIssueCommentEvent(context) && !context.isPR) {
@@ -55,7 +71,7 @@ export async function prepareJunieTask(
             },
             customPrompt
         );
-        junieTask = await getValidatedTextTask(promptText, "issue-comment");
+        taskText = await getValidatedTextTask(promptText, "issue-comment");
     }
 
     // Handle issue event (opened/edited)
@@ -67,7 +83,7 @@ export async function prepareJunieTask(
         const issueData = await fetcher.fetchIssueData(owner, repo, issueNumber, triggerTime);
 
         const promptText = formatter.formatIssuePrompt(issueData, customPrompt);
-        junieTask = await getValidatedTextTask(promptText, "issue");
+        taskText = await getValidatedTextTask(promptText, "issue");
     }
 
     // Handle PR comment
@@ -86,7 +102,7 @@ export async function prepareJunieTask(
             },
             customPrompt
         );
-        junieTask = await getValidatedTextTask(promptText, "pr-comment");
+        taskText = await getValidatedTextTask(promptText, "pr-comment");
     }
 
     // Handle PR review
@@ -109,7 +125,7 @@ export async function prepareJunieTask(
             review,
             customPrompt
         );
-        junieTask = await getValidatedTextTask(promptText, "pr-review");
+        taskText = await getValidatedTextTask(promptText, "pr-review");
     }
 
     // Handle PR review comment
@@ -128,7 +144,7 @@ export async function prepareJunieTask(
             },
             customPrompt
         );
-        junieTask = await getValidatedTextTask(promptText, "pr-review-comment");
+        taskText = await getValidatedTextTask(promptText, "pr-review-comment");
     }
 
     // Handle PR event (opened/edited)
@@ -140,18 +156,21 @@ export async function prepareJunieTask(
         const prData = await fetcher.fetchPullRequestData(owner, repo, pullNumber, triggerTime);
 
         const promptText = formatter.formatPullRequestPrompt(prData, customPrompt);
-        junieTask = await getValidatedTextTask(promptText, "pull-request");
+        taskText = await getValidatedTextTask(promptText, "pull-request");
     }
 
-    if (context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)) {
-        junieTask = `Merge onto main ${branchInfo.prBaseBranch || branchInfo.baseBranch}`
+    // For regular tasks, use task field
+    if (!taskText) {
+        throw new Error("No task was created. Please check your inputs.");
     }
+    cliInput = {
+        task: taskText
+    };
+    console.log(`Creating regular task with text length: ${taskText.length}`);
 
-    if (!junieTask) {
-        throw new Error("No task was created. Please check your inputs.")
-    }
 
-    core.setOutput(OUTPUT_VARS.EJ_TASK, JSON.stringify(junieTask));
+    // Save the CLI input as JSON string for the action
+    core.setOutput(OUTPUT_VARS.JUNIE_JSON_TASK, JSON.stringify(cliInput));
 
-    return junieTask;
+    return cliInput;
 }
