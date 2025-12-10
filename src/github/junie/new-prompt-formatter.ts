@@ -56,13 +56,10 @@ ${actorInfo ? actorInfo : ""}
         } else if (isIssueCommentEvent(context)) {
             githubUserInstruction = context.payload.comment.body
         }
-        return customPrompt ? `
+        return customPrompt || githubUserInstruction ? `
         <user_instruction>
-        ${customPrompt}
-</user_instruction>
-${githubUserInstruction ? `<github_user_instruction>${githubUserInstruction}</github_user_instruction>` : ""}
-        ` : githubUserInstruction ? `<user_instruction>${githubUserInstruction}</user_instruction>` : undefined
-    }
+        ${customPrompt || githubUserInstruction}
+</user_instruction>`: undefined}
 
     private getPrOrIssueInfo(context: GitHubContext, fetchedData: FetchedData): string | undefined {
         if (context.isPR) {
@@ -79,34 +76,24 @@ ${githubUserInstruction ? `<github_user_instruction>${githubUserInstruction}</gi
         const pr = fetchedData.pullRequest;
         if (!pr) return "";
 
-        return `Number: #${pr.number}
+        return `PR Number: #${pr.number}
 Title: ${pr.title}
-Author: @${pr.author?.login || 'ghost'}
+Author: @${pr.author?.login}
 State: ${pr.state}
 Branch: ${pr.headRefName} -> ${pr.baseRefName}
-Base Commit: ${pr.baseRefOid.substring(0, 7)}
-Head Commit: ${pr.headRefOid.substring(0, 7)}
-Stats: +${pr.additions}/-${pr.deletions} (${pr.changedFiles} files, ${pr.commits.totalCount} commits)
-Created: ${pr.createdAt}
-Updated: ${pr.updatedAt}
-
-Description:
-${pr.body || 'No description provided'}`
+Base Commit: ${pr.baseRefOid}
+Head Commit: ${pr.headRefOid}
+Stats: +${pr.additions}/-${pr.deletions} (${pr.changedFiles} files, ${pr.commits.totalCount} commits)`
     }
 
     private getIssueInfo( fetchedData: FetchedData): string {
         const issue = fetchedData.issue;
         if (!issue) return "";
 
-        return `Number: #${issue.number}
+        return `Issue Number: #${issue.number}
 Title: ${issue.title}
-Author: @${issue.author?.login || 'ghost'}
-State: ${issue.state}
-Created: ${issue.createdAt}
-Updated: ${issue.updatedAt}
-
-Description:
-${issue.body || 'No description provided'}`
+Author: @${issue.author?.login}
+State: ${issue.state}`
     }
 
     private getCommitsInfo(fetchedData: FetchedData): string | undefined {
