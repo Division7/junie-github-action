@@ -18,6 +18,7 @@ import {validateInputSize} from "../validation/input-size";
 import {downloadAttachmentsAndRewriteText} from "./attachment-downloader";
 import {GraphQLGitHubDataFetcher} from "../api/graphql-data-fetcher";
 import {FetchedData} from "../api/queries";
+import {CliInput} from "./types/junie";
 
 async function getValidatedTextTask(text: string, taskType: string): Promise<string> {
     // Download attachments and rewrite URLs in the text
@@ -53,10 +54,10 @@ export async function prepareJunieTask(
 
 
     const customPrompt = context.inputs.prompt || undefined;
-    let junieTask: string | undefined
+    let junieCLITask: CliInput = {}
 
     if (context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)) {
-        junieTask = `Merge onto main ${branchInfo.prBaseBranch || branchInfo.baseBranch}`;
+        junieCLITask.mergeTask = {branch: branchInfo.prBaseBranch || branchInfo.baseBranch}
     } else if (useStructuredPrompt) {
         const newFormatter = new NewGitHubPromptFormatter();
         let fetchedData: FetchedData = {};
@@ -71,20 +72,20 @@ export async function prepareJunieTask(
 
         // Generate prompt using new formatter
         const promptText = newFormatter.generatePrompt(context, fetchedData, customPrompt);
-        junieTask = await getValidatedTextTask(promptText, "structured-prompt");
+        junieCLITask.task = await getValidatedTextTask(promptText, "structured-prompt");
     } else {
         const formatter = new GitHubPromptFormatter();
         // Use old formatter logic for backward compatibility
-        junieTask = await prepareTaskWithOldFormatter(context, fetcher, formatter, customPrompt);
+        junieCLITask.task = await prepareTaskWithOldFormatter(context, fetcher, formatter, customPrompt);
     }
 
-    if (!junieTask) {
+    if (!junieCLITask.task && !junieCLITask.mergeTask) {
         throw new Error("No task was created. Please check your inputs.");
     }
 
-    core.setOutput(OUTPUT_VARS.EJ_TASK, JSON.stringify(junieTask));
+    core.setOutput(OUTPUT_VARS.JUNIE_JSON_TASK, JSON.stringify(junieCLITask));
 
-    return junieTask;
+    return junieCLITask;
 }
 
 async function prepareTaskWithOldFormatter(
