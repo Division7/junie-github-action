@@ -130,6 +130,8 @@ async function checkForUnpushedCommits(): Promise<boolean> {
         // Check for unpushed commits (commits that exist locally but not in upstream)
         const unpushedCommits = execSync('git log @{u}..HEAD --oneline', {encoding: 'utf-8'});
 
+        console.log('Unpushed commits:', unpushedCommits);
+
         // If git log returns any output, there are unpushed commits
         return unpushedCommits.trim().length > 0;
     } catch (error) {
