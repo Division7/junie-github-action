@@ -97,7 +97,7 @@ async function createNewBranch(baseBranch: string, branchName: string, prBaseBra
 
     try {
         console.log(`Creating new branch ${newBranch} from ${baseBranch}`);
-        await $`git checkout -b ${newBranch} origin/${baseBranch}`;
+        await $`git checkout --no-track -b ${newBranch} origin/${baseBranch}`;
 
         console.log(`✓ Successfully created and checked out new branch: ${newBranch}`);
 
@@ -236,14 +236,27 @@ async function setupWorkingBranch(context: GitHubContext, octokit: Octokits): Pr
  * GitHub Actions by default clones with shallow history (depth=1).
  *
  * @param branch - The branch to merge from (e.g., "main")
- * @param depth - The depth of the git clone (default=20)
+ * @param depth - The depth of the git clone (default=20). If undefined, fetches full history and unshallows if needed.
  * @throws {Error} if unable to fetch history
  */
 export async function ensureBranchHistory(branch: string, depth?: number) {
-    console.log(`Fetching full history of ${branch}...`);
+    console.log(`Fetching history of ${branch}...`);
 
     try {
-        await $`git fetch origin ${depth ? `--depth=${depth}` : ""} +${branch}:refs/remotes/origin/${branch}`;
+        if (depth === undefined) {
+            // For full history: unshallow if repository is shallow
+            // Replace by unshallow-slice
+            const isShallow = await $`test -f .git/shallow`.nothrow().then(r => r.exitCode === 0);
+            if (isShallow) {
+                console.log(`Repository is shallow, fetching full history...`);
+                await $`git fetch --unshallow origin +${branch}:refs/remotes/origin/${branch}`;
+            } else {
+                await $`git fetch origin +${branch}:refs/remotes/origin/${branch}`;
+            }
+        } else {
+            // For limited depth
+            await $`git fetch origin --depth=${depth} +${branch}:refs/remotes/origin/${branch}`;
+        }
         console.log(`✓ Successfully fetched ${branch} history`);
     } catch (error) {
         throw new Error(
