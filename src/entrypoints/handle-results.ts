@@ -4,6 +4,7 @@ import {execSync} from 'child_process';
 import * as core from "@actions/core";
 import {ENV_VARS, OUTPUT_VARS} from "../constants/environment";
 import {handleStepError} from "../utils/error-handler";
+import {isReviewOrCommentHasResolveConflictsTrigger} from "../github/validation/trigger";
 
 export enum ActionType {
     WRITE_COMMENT = 'WRITE_COMMENT',
@@ -36,7 +37,7 @@ export async function handleResults() {
                 `Review the errors above and check the Junie execution logs for more details.`
             );
         }
-        const actionToDo = await getActionToDo(context.inputs.silentMode);
+        const actionToDo = await getActionToDo(context);
         const title = junieJsonOutput.taskName
         const body = junieJsonOutput.result
         let issueId
@@ -69,8 +70,8 @@ export async function handleResults() {
     }
 }
 
-async function getActionToDo(silentMode: boolean): Promise<ActionType> {
-    if (silentMode) {
+async function getActionToDo(context: GitHubContext): Promise<ActionType> {
+    if (context.inputs.silentMode) {
         console.log('Silent mode enabled - no git operations will be performed');
         return ActionType.NOTHING;
     }
@@ -80,25 +81,26 @@ async function getActionToDo(silentMode: boolean): Promise<ActionType> {
     const hasChangedFiles = await checkForChangedFiles();
     const hasUnpushedCommits = await checkForUnpushedCommits(isNewBranch, baseBranch);
     const initCommentId = process.env[OUTPUT_VARS.INIT_COMMENT_ID];
-
+    const isResolveConflicts = context.inputs.resolveConflicts || isReviewOrCommentHasResolveConflictsTrigger(context)
 
     console.log(`Has changed files: ${hasChangedFiles}`);
     console.log(`Has unpushed commits: ${hasUnpushedCommits}`);
     console.log(`Init comment ID: ${initCommentId}`);
     console.log(`Is new branch: ${isNewBranch}`);
     console.log(`Working branch: ${workingBranch}`);
+    console.log(`Is resolve conflicts: ${isResolveConflicts}`)
 
     let action: ActionType
     if (!hasChangedFiles && !hasUnpushedCommits && initCommentId) {
         console.log('No changes and no unpushed commits but has comment ID - will write comment');
         action = ActionType.WRITE_COMMENT;
-    } else if ((hasChangedFiles || hasUnpushedCommits) && isNewBranch) {
+    } else if (((hasChangedFiles || hasUnpushedCommits) && isNewBranch) || (isResolveConflicts && isNewBranch)) {
         console.log('Changes found and working in new branch - will create PR');
         action = ActionType.CREATE_PR;
     } else if (hasChangedFiles && !isNewBranch) {
         console.log('Changes found and working in existing branch - will commit directly');
         action = ActionType.COMMIT_CHANGES;
-    } else if (hasUnpushedCommits) {
+    } else if (hasUnpushedCommits || isResolveConflicts) {
         console.log('No changes but has unpushed commits - will push');
         action = ActionType.PUSH;
     } else {

@@ -8,9 +8,8 @@ import {
 } from "../context";
 import * as core from "@actions/core";
 import {BranchInfo} from "../operations/branch";
-import {isReviewOrCommentHasTrigger} from "../validation/trigger";
+import {isReviewOrCommentHasResolveConflictsTrigger} from "../validation/trigger";
 import {OUTPUT_VARS} from "../../constants/environment";
-import {RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP} from "../../constants/github";
 import {Octokits} from "../api/client";
 import {GitHubPromptFormatter} from "./prompt-formatter";
 import {NewGitHubPromptFormatter} from "./new-prompt-formatter";
@@ -56,7 +55,7 @@ export async function prepareJunieTask(
     const customPrompt = context.inputs.prompt || undefined;
     let junieCLITask: CliInput = {}
 
-    if (context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)) {
+    if (context.inputs.resolveConflicts || isReviewOrCommentHasResolveConflictsTrigger(context)) {
         junieCLITask.mergeTask = {branch: branchInfo.prBaseBranch || branchInfo.baseBranch}
     } else if (useStructuredPrompt) {
         const newFormatter = new NewGitHubPromptFormatter();

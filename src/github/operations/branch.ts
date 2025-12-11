@@ -11,8 +11,8 @@ import {
 } from "../context";
 import type {Octokits} from "../api/client";
 import {OUTPUT_VARS} from "../../constants/environment";
-import {RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP, WORKING_BRANCH_PREFIX} from "../../constants/github";
-import {isReviewOrCommentHasTrigger} from "../validation/trigger";
+import {WORKING_BRANCH_PREFIX} from "../../constants/github";
+import {isReviewOrCommentHasResolveConflictsTrigger} from "../validation/trigger";
 
 export type BranchInfo = {
     baseBranch: string;
@@ -272,7 +272,7 @@ export async function setupBranch(octokit: Octokits, context: GitHubContext) {
     let branchInfo = await setupWorkingBranch(context, octokit)
 
     // If we need to resolve conflicts, ensure we have full git history for merge operations
-    if (context.inputs.resolveConflicts || isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)) {
+    if (context.inputs.resolveConflicts || isReviewOrCommentHasResolveConflictsTrigger(context)) {
         branchInfo.isNewBranch ? await ensureMergeHistory(branchInfo.prBaseBranch!) : await ensureMergeHistory(branchInfo.workingBranch);
         await ensureMergeHistory(branchInfo.baseBranch);
     }

@@ -9,6 +9,7 @@ import {
     isPullRequestReviewCommentEvent,
     isPullRequestReviewEvent,
 } from "../context";
+import {RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP} from "../../constants/github";
 
 export function checkContainsTrigger(context: GitHubContext): boolean {
     const {
@@ -80,6 +81,10 @@ export function checkContainsTrigger(context: GitHubContext): boolean {
 
     console.log(`No trigger was met for ${triggerPhrase}`);
     return false;
+}
+
+export function isReviewOrCommentHasResolveConflictsTrigger(context: GitHubContext) {
+    return isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)
 }
 
 export function isReviewOrCommentHasTrigger(context: GitHubContext, regExp: RegExp) {
