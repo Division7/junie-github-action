@@ -113,9 +113,11 @@ async function getActionToDo(silentMode: boolean): Promise<ActionType> {
 
 async function checkForChangedFiles(): Promise<boolean> {
     try {
+        console.log('Checking for changed files...');
         // Check for staged and unstaged changes
         const gitStatus = execSync('git status --porcelain', {encoding: 'utf-8'});
 
+        console.log('Changed files:', gitStatus);
         // If git status returns any output, there are changes
         return gitStatus.trim().length > 0;
     } catch (error) {
@@ -127,6 +129,7 @@ async function checkForChangedFiles(): Promise<boolean> {
 
 async function checkForUnpushedCommits(): Promise<boolean> {
     try {
+        console.log('Checking for unpushed commits...');
         // Check for unpushed commits (commits that exist locally but not in upstream)
         const unpushedCommits = execSync('git log @{u}..HEAD --oneline', {encoding: 'utf-8'});
 
