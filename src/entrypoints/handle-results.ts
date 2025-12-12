@@ -39,7 +39,7 @@ export async function handleResults() {
             );
         }
         const actionToDo = await getActionToDo(context);
-        const title = junieJsonOutput.taskName || isResolveConflict ? `Resolve conflicts for ${context.entityNumber} PR` : 'Junie finished task successfully'
+        const title = junieJsonOutput.taskName || (isResolveConflict ? `Resolve conflicts for ${context.entityNumber} PR` : 'Junie finished task successfully')
         const body = junieJsonOutput.result
         let issueId
         if (isEntityContext(context)) {
@@ -131,8 +131,6 @@ async function checkForChangedFiles(): Promise<boolean> {
 async function checkForUnpushedCommits(isNewBranch: boolean, baseBranch: string): Promise<boolean> {
     try {
         console.log('Checking for unpushed commits...');
-        console.log(`Git status after Junie: ${execSync('git status', {encoding: 'utf-8'})}}`)
-        console.log("Recent commits (oneline): ", execSync('git log --oneline -n 10', {encoding: 'utf-8'}))
 
         if (isNewBranch) {
             // For a new branch, compare with the remote base branch
