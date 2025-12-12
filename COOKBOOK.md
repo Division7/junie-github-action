@@ -275,7 +275,7 @@ jobs:
           allowed_mcp_servers: "mcp_github_checks_server"
           use_single_comment: "true"
           prompt: |
-            CI workflow "${{ github.event.workflow_run.name }}" failed. Diagnose and fix if possible.
+            CI workflow "${{ github.event.workflow_run.name }}" failed. Diagnose, provide analytics and suggest fix.
 
             **Analysis:**
             1. Use `get_pr_failed_checks_info` MCP tool to fetch error logs
@@ -295,7 +295,7 @@ jobs:
             ## 📝 Files to Change
             - `path/file`: [what needs to change]
 
-            Only provide analysis without modifying files.
+            Only provide analysis and suggest fix without modifying files.
 ```
 
 </details>
