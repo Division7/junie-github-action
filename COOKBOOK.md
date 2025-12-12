@@ -113,7 +113,7 @@ jobs:
           use_single_comment: "true"
           prompt: |
             Your task is to:
-            1. Download the Pull Request diff using `gh pr diff junie/issue-46-20164285053`
+            1. Download the Pull Request diff using `gh pr diff ${{ github.event.pull_request.head.ref }}`
             2. Review the downloaded diff according to the criteria below
             3. Output summary following the template below using `submit` action
             
