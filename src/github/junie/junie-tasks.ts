@@ -1,5 +1,5 @@
 import {
-    GitHubContext,
+    JunieExecutionContext,
     isIssueCommentEvent,
     isIssuesEvent,
     isPullRequestEvent,
@@ -25,7 +25,7 @@ async function getValidatedTextTask(text: string, taskType: string): Promise<str
     return textWithLocalAttachments
 }
 
-function getTriggerTime(context: GitHubContext): string | undefined {
+function getTriggerTime(context: JunieExecutionContext): string | undefined {
     if (isIssueCommentEvent(context)) {
         return context.payload.comment.created_at;
     } else if (isIssuesEvent(context)) {
@@ -41,7 +41,7 @@ function getTriggerTime(context: GitHubContext): string | undefined {
 }
 
 export async function prepareJunieTask(
-    context: GitHubContext,
+    context: JunieExecutionContext,
     branchInfo: BranchInfo,
     octokit: Octokits
 ) {

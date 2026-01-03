@@ -2,7 +2,7 @@
 
 import * as core from "@actions/core";
 import {addJunieMarker, createCommentBody, createJobRunLink, hasJunieMarker} from "./common";
-import {GitHubContext, isPullRequestReviewCommentEvent,} from "../../context";
+import {JunieExecutionContext, isPullRequestReviewCommentEvent,} from "../../context";
 import type {Octokit} from "@octokit/rest";
 import {GITHUB_SERVER_URL} from "../../api/config";
 import {OUTPUT_VARS} from "../../../constants/environment";
@@ -25,7 +25,7 @@ import type {FailureFeedbackData, FinishFeedbackData, SuccessFeedbackData} from 
  */
 async function findExistingJunieComment(
     octokit: Octokit,
-    context: GitHubContext,
+    context: JunieExecutionContext,
 ): Promise<number | undefined> {
     // entityNumber is required for all comment searches
     // It's checked in writeInitialFeedbackComment, but we verify here too for safety
@@ -105,7 +105,7 @@ async function findExistingJunieComment(
  */
 async function updateExistingComment(
     octokit: Octokit,
-    context: GitHubContext,
+    context: JunieExecutionContext,
     commentId: number,
     body: string,
     ownerLogin: string,
@@ -147,9 +147,9 @@ async function updateExistingComment(
  * @returns The comment ID (used later for updating), or undefined if skipped
  * @throws {Error} if unable to create comment (permissions, API limits, locked issue/PR)
  */
-export async function writeInitialFeedbackComment(
+export async function postJunieWorkingStatusComment(
     octokit: Octokit,
-    context: GitHubContext,
+    context: JunieExecutionContext,
 ) {
     if (context.inputs.silentMode) {
         console.log('Silent mode enabled - skipping initial feedback comment');
@@ -221,7 +221,7 @@ export async function writeInitialFeedbackComment(
  */
 async function createNewComment(
     octokit: Octokit,
-    context: GitHubContext,
+    context: JunieExecutionContext,
     body: string,
     ownerLogin: string,
     repoName: string,
@@ -271,7 +271,10 @@ async function createNewComment(
  * @param data - Feedback data containing result, comment ID, and context
  * @throws {Error} if unable to update comment (permissions, comment deleted, API limits)
  */
-export async function writeFinishFeedbackComment(
+/**
+ * Posts completion comment with Junie task results
+ */
+export async function postJunieCompletionComment(
     octokit: Octokit,
     data: FinishFeedbackData
 ) {

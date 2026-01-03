@@ -1,5 +1,5 @@
 import {describe, expect, test} from "bun:test";
-import {checkContainsTrigger} from "../src/github/validation/trigger";
+import {detectJunieTriggerPhrase} from "../src/github/validation/trigger";
 import {createMockContext, mockPullRequestCommentContext} from "./mockContext";
 import type {IssuesEvent, IssueCommentEvent} from "@octokit/webhooks-types";
 
@@ -19,7 +19,7 @@ describe("Trigger Validation - case insensitive", () => {
       }
     });
 
-    expect(checkContainsTrigger(context)).toBe(true);
+    expect(detectJunieTriggerPhrase(context)).toBe(true);
   });
 
   test("should match trigger phrase in issue title regardless of case", () => {
@@ -37,7 +37,7 @@ describe("Trigger Validation - case insensitive", () => {
       }
     });
 
-    expect(checkContainsTrigger(context)).toBe(true);
+    expect(detectJunieTriggerPhrase(context)).toBe(true);
   });
 
   test("should match trigger phrase in comments regardless of case", () => {
@@ -54,6 +54,6 @@ describe("Trigger Validation - case insensitive", () => {
       }
     });
 
-    expect(checkContainsTrigger(context)).toBe(true);
+    expect(detectJunieTriggerPhrase(context)).toBe(true);
   });
 });

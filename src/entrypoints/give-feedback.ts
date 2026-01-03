@@ -1,12 +1,11 @@
-import * as core from "@actions/core";
-import {writeFinishFeedbackComment} from "../github/operations/comments/feedback";
+import {postJunieCompletionComment} from "../github/operations/comments/feedback";
 import type {FinishFeedbackData} from "../github/operations/comments/types";
-import {GitHubContext} from "../github/context";
+import {JunieExecutionContext} from "../github/context";
 import {ActionType} from "./handle-results";
 import {ENV_VARS, OUTPUT_VARS} from "../constants/environment";
 import {formatJunieSummary} from "./format-summary";
 import {appendFileSync} from "fs";
-import {createOctokit} from "../github/api/client";
+import {buildGitHubApiClient} from "../github/api/client";
 import {handleStepError} from "../utils/error-handler";
 
 /**
@@ -16,7 +15,7 @@ async function writeFeedbackComment(isJobFailed: boolean, initCommentId: string)
     const data: FinishFeedbackData = {
         initCommentId: initCommentId,
         isJobFailed: isJobFailed,
-        parsedContext: JSON.parse(process.env[OUTPUT_VARS.PARSED_CONTEXT]!) as GitHubContext
+        parsedContext: JSON.parse(process.env[OUTPUT_VARS.PARSED_CONTEXT]!) as JunieExecutionContext
     }
 
     if (data.isJobFailed) {
@@ -33,8 +32,8 @@ async function writeFeedbackComment(isJobFailed: boolean, initCommentId: string)
         }
     }
 
-    const octokits = createOctokit(process.env[ENV_VARS.GITHUB_TOKEN]!);
-    await writeFinishFeedbackComment(octokits.rest, data)
+    const octokits = buildGitHubApiClient(process.env[ENV_VARS.GITHUB_TOKEN]!);
+    await postJunieCompletionComment(octokits.rest, data)
 }
 
 /**

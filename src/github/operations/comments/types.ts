@@ -1,10 +1,10 @@
-import {GitHubContext} from "../../context";
+import {JunieExecutionContext} from "../../context";
 import {ActionType} from "../../../entrypoints/handle-results";
 
 export interface FinishFeedbackData {
     initCommentId: string;
     isJobFailed: boolean;
-    parsedContext: GitHubContext;
+    parsedContext: JunieExecutionContext;
     successData?: SuccessFeedbackData;
     failureData?: FailureFeedbackData;
 }

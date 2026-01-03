@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import type {Octokit} from "@octokit/rest";
-import type {ParsedGitHubContext} from "../context";
+import type {UserInitiatedEventContext} from "../context";
 
 /**
  * Verifies that the workflow was triggered by a human user, not a bot.
@@ -10,13 +10,13 @@ import type {ParsedGitHubContext} from "../context";
  * Only applies to interactive events (comments, issues, PRs) - automated workflows skip this check.
  *
  * @param octokit - Octokit REST client for GitHub API calls
- * @param githubContext - Parsed GitHub context containing actor information
+ * @param githubContext - User-initiated event context containing actor information
  * @throws {Error} if actor is a bot (type !== "User")
  * @throws {Error} if unable to fetch actor information from GitHub API
  */
 export async function checkHumanActor(
     octokit: Octokit,
-    githubContext: ParsedGitHubContext,
+    githubContext: UserInitiatedEventContext,
 ): Promise<boolean> {
     try {
         // Fetch actor information from GitHub API to determine their type (User, Bot)

@@ -1,5 +1,5 @@
 import {COMMIT_MESSAGE_TEMPLATE, PR_BODY_TEMPLATE, PR_TITLE_TEMPLATE} from "../constants/github";
-import {GitHubContext, isEntityContext} from "../github/context";
+import {JunieExecutionContext, isTriggeredByUserInteraction} from "../github/context";
 import {execSync} from 'child_process';
 import * as core from "@actions/core";
 import {ENV_VARS, OUTPUT_VARS} from "../constants/environment";
@@ -27,7 +27,7 @@ export async function handleResults() {
             );
         }
         const junieJsonOutput = JSON.parse(stringJunieJsonOutput) as any
-        const context = JSON.parse(process.env[OUTPUT_VARS.PARSED_CONTEXT]!) as GitHubContext
+        const context = JSON.parse(process.env[OUTPUT_VARS.PARSED_CONTEXT]!) as JunieExecutionContext
         const isResolveConflict = context.inputs.resolveConflicts || isReviewOrCommentHasResolveConflictsTrigger(context)
         const junieErrors = junieJsonOutput.errors
         if (junieErrors && (junieErrors as string[]).length > 0) {
@@ -42,7 +42,7 @@ export async function handleResults() {
         const title = junieJsonOutput.taskName || (isResolveConflict ? `Resolve conflicts for ${context.entityNumber} PR` : 'Junie finished task successfully')
         const body = junieJsonOutput.result
         let issueId
-        if (isEntityContext(context)) {
+        if (isTriggeredByUserInteraction(context)) {
             issueId = context.entityNumber
         }
         const commitMessage = COMMIT_MESSAGE_TEMPLATE(title, issueId)
@@ -71,7 +71,7 @@ export async function handleResults() {
     }
 }
 
-async function getActionToDo(context: GitHubContext): Promise<ActionType> {
+async function getActionToDo(context: JunieExecutionContext): Promise<ActionType> {
     if (context.inputs.silentMode) {
         console.log('Silent mode enabled - no git operations will be performed');
         return ActionType.NOTHING;

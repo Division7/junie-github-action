@@ -1,10 +1,10 @@
-import {GitHubContext} from "../../context";
+import {JunieExecutionContext} from "../../context";
 import {Octokits} from "../../api/client";
 import type {GitHubTokenConfig} from "../../token";
 
 
 export type PrepareJunieOptions = {
-    context: GitHubContext;
+    context: JunieExecutionContext;
     octokit: Octokits;
     tokenConfig: GitHubTokenConfig;
 };

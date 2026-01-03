@@ -8,7 +8,11 @@ export interface GitHubTokenConfig {
     isDefaultToken: (token?: string) => boolean;
 }
 
-export async function setupGitHubToken(): Promise<GitHubTokenConfig> {
+/**
+ * Acquires and configures GitHub authentication token for Junie workflow
+ * Prioritizes custom token if provided, otherwise uses default workflow token
+ */
+export async function acquireGitHubAuthentication(): Promise<GitHubTokenConfig> {
     const defaultToken = process.env[ENV_VARS.DEFAULT_WORKFLOW_TOKEN]!;
     const providedToken = process.env[ENV_VARS.OVERRIDE_GITHUB_TOKEN];
 

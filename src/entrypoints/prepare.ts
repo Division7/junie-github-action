@@ -1,21 +1,20 @@
 #!/usr/bin/env bun
 
-import * as core from "@actions/core";
-import {setupGitHubToken} from "../github/token";
-import {createOctokit} from "../github/api/client";
-import {parseGitHubContext} from "../github/context";
-import {prepare} from "../github/junie/prepare-junie";
-import {getTokenOwnerInfo} from "../github/operations/auth";
+import {acquireGitHubAuthentication} from "../github/token";
+import {buildGitHubApiClient} from "../github/api/client";
+import {extractJunieWorkflowContext} from "../github/context";
+import {fetchGitHubTokenOwnerDetails} from "../github/operations/auth";
 import {handleStepError} from "../utils/error-handler";
+import {initializeJunieExecution} from "../github/junie/prepare-junie";
 
 async function run() {
     try {
-        const tokenConfig = await setupGitHubToken();
-        const octokit = createOctokit(tokenConfig.workingToken);
-        const tokenOwner = await getTokenOwnerInfo(octokit, tokenConfig);
-        const context = parseGitHubContext(tokenOwner);
+        const tokenConfig = await acquireGitHubAuthentication();
+        const octokit = buildGitHubApiClient(tokenConfig.workingToken);
+        const tokenOwner = await fetchGitHubTokenOwnerDetails(octokit, tokenConfig);
+        const context = extractJunieWorkflowContext(tokenOwner);
 
-        await prepare({
+        await initializeJunieExecution({
             context,
             octokit,
             tokenConfig

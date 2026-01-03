@@ -7,7 +7,12 @@ export type Octokits = {
     graphql: typeof graphql;
 };
 
-export function createOctokit(token: string): Octokits {
+/**
+ * Builds configured GitHub API client with REST and GraphQL interfaces
+ * @param token - GitHub authentication token
+ * @returns Octokits instance with REST and GraphQL clients
+ */
+export function buildGitHubApiClient(token: string): Octokits {
     return {
         rest: new Octokit({
             auth: token,

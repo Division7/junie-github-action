@@ -1,5 +1,5 @@
 import {describe, expect, test} from "bun:test";
-import {checkContainsTrigger, escapeRegExp} from "../src/github/validation/trigger";
+import {detectJunieTriggerPhrase, escapeRegExp} from "../src/github/validation/trigger";
 import {
     createMockContext,
     mockIssueAssignedContext,
@@ -25,7 +25,7 @@ describe("Trigger Validation", () => {
     });
   });
 
-  describe("checkContainsTrigger", () => {
+  describe("detectJunieTriggerPhrase", () => {
     describe("assignee trigger", () => {
       test("should trigger when issue is assigned to trigger user", () => {
         const context = createMockContext({
@@ -38,7 +38,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should handle @ prefix in trigger user", () => {
@@ -52,7 +52,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should not trigger when assigned to different user", () => {
@@ -66,7 +66,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
 
       test("should not trigger when assignee is missing", () => {
@@ -80,7 +80,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
     });
 
@@ -96,7 +96,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should not trigger when labeled with different label", () => {
@@ -110,7 +110,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
 
       test("should not trigger when label is missing", () => {
@@ -124,7 +124,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
     });
 
@@ -144,7 +144,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should trigger when phrase is in issue title", () => {
@@ -162,7 +162,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should trigger when phrase is at start of text", () => {
@@ -179,7 +179,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should trigger when phrase is at end of text", () => {
@@ -196,7 +196,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should trigger with punctuation after phrase", () => {
@@ -223,7 +223,7 @@ describe("Trigger Validation", () => {
             },
           });
 
-          expect(checkContainsTrigger(context)).toBe(true);
+          expect(detectJunieTriggerPhrase(context)).toBe(true);
         });
       });
 
@@ -248,7 +248,7 @@ describe("Trigger Validation", () => {
             },
           });
 
-          expect(checkContainsTrigger(context)).toBe(false);
+          expect(detectJunieTriggerPhrase(context)).toBe(false);
         });
       });
 
@@ -267,7 +267,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
 
       test("should handle empty body and title", () => {
@@ -285,7 +285,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
 
       test("should handle null body", () => {
@@ -303,7 +303,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
     });
 
@@ -322,7 +322,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should trigger when phrase is in PR title", () => {
@@ -340,25 +340,25 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
     });
 
     describe("trigger phrase in comments", () => {
       test("should trigger on issue comment", () => {
-          expect(checkContainsTrigger(mockIssueCommentContext)).toBe(true);
+          expect(detectJunieTriggerPhrase(mockIssueCommentContext)).toBe(true);
       });
 
       test("should trigger on PR comment", () => {
-          expect(checkContainsTrigger(mockPullRequestCommentContext)).toBe(true);
+          expect(detectJunieTriggerPhrase(mockPullRequestCommentContext)).toBe(true);
       });
 
       test("should trigger on PR review", () => {
-          expect(checkContainsTrigger(mockPullRequestReviewContext)).toBe(true);
+          expect(detectJunieTriggerPhrase(mockPullRequestReviewContext)).toBe(true);
       });
 
       test("should trigger on PR review comment", () => {
-          expect(checkContainsTrigger(mockPullRequestReviewCommentContext)).toBe(true);
+          expect(detectJunieTriggerPhrase(mockPullRequestReviewCommentContext)).toBe(true);
       });
 
       test("should not trigger when comment lacks trigger phrase", () => {
@@ -375,7 +375,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(false);
+        expect(detectJunieTriggerPhrase(context)).toBe(false);
       });
     });
 
@@ -394,7 +394,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
 
       test("should escape special characters in custom trigger", () => {
@@ -411,7 +411,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
     });
 
@@ -431,7 +431,7 @@ describe("Trigger Validation", () => {
           },
         });
 
-        expect(checkContainsTrigger(context)).toBe(true);
+        expect(detectJunieTriggerPhrase(context)).toBe(true);
       });
     });
   });

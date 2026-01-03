@@ -3,7 +3,7 @@
 import * as core from "@actions/core";
 import {$} from "bun";
 import {
-    GitHubContext,
+    JunieExecutionContext,
     isPullRequestEvent,
     isPullRequestReviewCommentEvent,
     isPullRequestReviewEvent,
@@ -121,7 +121,7 @@ async function createNewBranch(baseBranch: string, branchName: string, prBaseBra
     }
 }
 
-async function setupWorkingBranch(context: GitHubContext, octokit: Octokits): Promise<BranchInfo> {
+async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octokit: Octokits): Promise<BranchInfo> {
     let baseBranch = context.inputs.baseBranch || context.payload.repository.default_branch
     let prBaseBranch: string | undefined;
     const entityNumber = context.entityNumber;
@@ -282,12 +282,12 @@ export async function ensureBranchHistory(branch: string, depth?: number) {
  * Sets GitHub Actions outputs: BASE_BRANCH, WORKING_BRANCH, IS_NEW_BRANCH
  *
  * @param octokit - Octokit clients (rest and graphql)
- * @param context - GitHub context (event payload, inputs, etc.)
+ * @param context - Junie execution(event payload, inputs, etc.)
  * @returns Branch information with base branch, working branch, and isNewBranch flag
  * @throws {Error} if unable to fetch PR information or create/checkout branches
  */
-export async function setupBranch(octokit: Octokits, context: GitHubContext) {
-    let branchInfo = await setupWorkingBranch(context, octokit)
+export async function initializeJunieWorkspace(octokit: Octokits, context: JunieExecutionContext) {
+    let branchInfo = await prepareWorkingBranchForJunie(context, octokit)
 
     // Set GitHub Actions outputs for use in subsequent steps
     core.setOutput(OUTPUT_VARS.BASE_BRANCH, branchInfo.baseBranch);

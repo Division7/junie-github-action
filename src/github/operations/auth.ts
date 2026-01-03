@@ -1,5 +1,5 @@
 import {GITHUB_SERVER_URL} from "../api/config";
-import {GitHubContext} from "../context";
+import {JunieExecutionContext} from "../context";
 import {$} from "bun";
 import type {Octokits} from "../api/client";
 import type {GitHubTokenConfig} from "../token";
@@ -31,7 +31,7 @@ export interface TokenOwner {
  * @returns Token owner information (login, id, type)
  * @throws {Error} if unable to authenticate with the provided token
  */
-export async function getTokenOwnerInfo(octokit: Octokits, tokenConfig: GitHubTokenConfig): Promise<TokenOwner> {
+export async function fetchGitHubTokenOwnerDetails(octokit: Octokits, tokenConfig: GitHubTokenConfig): Promise<TokenOwner> {
     try {
         // Default GITHUB_TOKEN has limited permissions and can't read user info
         // Return well-known github-actions bot credentials to avoid unnecessary API call
@@ -123,11 +123,11 @@ export async function getTokenOwnerInfo(octokit: Octokits, tokenConfig: GitHubTo
  * - For bots/apps: Use noreply email format (id+login@users.noreply.github.com)
  * - For human users: Use actor's credentials from GitHub context
  *
- * @param parsedContext - GitHub context with token owner and actor information
+ * @param parsedContext - Junie execution context with token owner and actor information
  * @param tokenConfig - Token configuration (default or custom)
  * @throws {Error} if git configuration fails (git not installed, permission issues)
  */
-export async function gitAuth(parsedContext: GitHubContext, tokenConfig: GitHubTokenConfig) {
+export async function configureGitCredentials(parsedContext: JunieExecutionContext, tokenConfig: GitHubTokenConfig) {
     console.log("Configuring git authentication...");
 
     const serverUrl = new URL(GITHUB_SERVER_URL);

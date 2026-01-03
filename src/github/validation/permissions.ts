@@ -1,21 +1,21 @@
 import * as core from "@actions/core";
-import type {ParsedGitHubContext} from "../context";
+import type {UserInitiatedEventContext} from "../context";
 import type {Octokit} from "@octokit/rest";
 
 /**
- * Checks if the actor has write or admin permissions on the repository.
+ * Verifies if the actor has repository access for triggering Junie workflows.
  *
- * This ensures only repository collaborators can trigger Junie, preventing unauthorized access.
+ * Ensures only authorized users can trigger Junie, preventing unauthorized access.
  * GitHub Apps (actors ending with "[bot]") automatically bypass this check.
  *
  * @param octokit - Octokit REST client for GitHub API calls
- * @param context - Parsed GitHub context containing actor and repository information
+ * @param context - User-initiated event context containing actor and repository information
  * @returns `true` if actor has write/admin permissions or is a GitHub App, `false` otherwise
- * @throws {Error} if unable to check permissions (API errors, network issues)
+ * @throws {Error} if unable to verify permissions (API errors, network issues)
  */
-export async function checkWritePermissions(
+export async function verifyRepositoryAccess(
     octokit: Octokit,
-    context: ParsedGitHubContext
+    context: UserInitiatedEventContext
 ): Promise<boolean> {
     const {actor} = context;
     const repo = context.payload.repository;

@@ -2,14 +2,14 @@
 
 import * as core from "@actions/core";
 import { Octokit } from "@octokit/rest";
-import { GitHubContext } from "../github/context";
+import { JunieExecutionContext } from "../github/context";
 import { ENV_VARS, OUTPUT_VARS } from "../constants/environment";
 import { handleStepError } from "../utils/error-handler";
 
 export async function createPullRequest() {
     try {
         const githubToken = process.env[ENV_VARS.GITHUB_TOKEN]!;
-        const context = JSON.parse(process.env[OUTPUT_VARS.PARSED_CONTEXT]!) as GitHubContext;
+        const context = JSON.parse(process.env[OUTPUT_VARS.PARSED_CONTEXT]!) as JunieExecutionContext;
         const prTitle = process.env[OUTPUT_VARS.PR_TITLE]!;
         const prBody = process.env[OUTPUT_VARS.PR_BODY]!;
         const baseBranch = process.env[OUTPUT_VARS.BASE_BRANCH]!;

@@ -25,7 +25,8 @@ export type ScheduleEvent = {
     repository: Repository;
 };
 
-const ENTITY_EVENT_NAMES = [
+// Events triggered by user interactions (comments, issues, PRs)
+const USER_TRIGGERED_EVENTS = [
     "push",
     "issues",
     "issue_comment",
@@ -34,7 +35,8 @@ const ENTITY_EVENT_NAMES = [
     "pull_request_review_comment",
 ] as const;
 
-const AUTOMATION_EVENT_NAMES = [
+// Events triggered by automation/schedules
+const SYSTEM_TRIGGERED_EVENTS = [
     "workflow_dispatch",
     "repository_dispatch",
     "schedule",
@@ -42,10 +44,11 @@ const AUTOMATION_EVENT_NAMES = [
     "check_suite",
 ] as const;
 
-type EntityEventName = (typeof ENTITY_EVENT_NAMES)[number];
-type AutomationEventName = (typeof AUTOMATION_EVENT_NAMES)[number];
+type UserTriggeredEventName = (typeof USER_TRIGGERED_EVENTS)[number];
+type SystemTriggeredEventName = (typeof SYSTEM_TRIGGERED_EVENTS)[number];
 
-type BaseContext = {
+// Base workflow context shared by all Junie executions
+type JunieWorkflowContext = {
     runId: string;
     workflow: string;
     eventAction?: string;
@@ -73,19 +76,9 @@ type BaseContext = {
     };
 };
 
-export type AutomationEntityGitHubContext = BaseContext & {
-    eventName: EntityEventName;
-    payload:
-        | IssuesEvent
-        | IssueCommentEvent
-        | PullRequestEvent
-        | PullRequestReviewEvent
-        | PullRequestReviewCommentEvent;
-    isPR: boolean;
-};
-
-export type ParsedGitHubContext = BaseContext & {
-    eventName: EntityEventName;
+// Context for user-initiated events that we track
+export type UserInitiatedEventContext = JunieWorkflowContext & {
+    eventName: UserTriggeredEventName;
     payload:
         | PushEvent
         | IssuesEvent
@@ -95,8 +88,9 @@ export type ParsedGitHubContext = BaseContext & {
         | PullRequestReviewCommentEvent;
 };
 
-export type AutomationContext = BaseContext & {
-    eventName: AutomationEventName;
+// Context for automated workflow events (workflow_dispatch, schedule, etc.)
+export type AutomationEventContext = JunieWorkflowContext & {
+    eventName: SystemTriggeredEventName;
     payload:
         | CheckSuiteEvent
         | WorkflowDispatchEvent
@@ -105,9 +99,15 @@ export type AutomationContext = BaseContext & {
         | WorkflowRunEvent;
 };
 
-export type GitHubContext = ParsedGitHubContext | AutomationContext;
+// Union type representing all possible Junie execution contexts
+export type JunieExecutionContext = UserInitiatedEventContext | AutomationEventContext;
 
-export function parseGitHubContext(tokenOwner: TokenOwner): GitHubContext {
+/**
+ * Extracts and builds Junie workflow context from GitHub event data
+ * @param tokenOwner - Information about the token owner (user or app)
+ * @returns Junie execution context with event-specific data
+ */
+export function extractJunieWorkflowContext(tokenOwner: TokenOwner): JunieExecutionContext {
     const context = github.context;
     const commonFields = {
         runId: process.env.GITHUB_RUN_ID!,
@@ -135,7 +135,7 @@ export function parseGitHubContext(tokenOwner: TokenOwner): GitHubContext {
         },
     };
 
-    let parsedContext: GitHubContext;
+    let parsedContext: JunieExecutionContext;
     switch (context.eventName) {
         case "issues": {
             const payload = context.payload as IssuesEvent;
@@ -269,68 +269,75 @@ export function parseGitHubContext(tokenOwner: TokenOwner): GitHubContext {
     return parsedContext;
 }
 
-export function isWorkflowDispatchEvent(context: GitHubContext): context is AutomationContext & { payload: WorkflowDispatchEvent } {
+// Type guard functions for checking event types
+
+export function isWorkflowDispatchEvent(context: JunieExecutionContext): context is AutomationEventContext & { payload: WorkflowDispatchEvent } {
     return context.eventName === "workflow_dispatch";
 }
 
-export function isCheckSuiteEvent(context: GitHubContext): context is AutomationContext & { payload: CheckSuiteEvent } {
+export function isCheckSuiteEvent(context: JunieExecutionContext): context is AutomationEventContext & { payload: CheckSuiteEvent } {
     return context.eventName === "check_suite";
 }
 
 export function isPushEvent(
-    context: GitHubContext,
-): context is ParsedGitHubContext & { payload: PushEvent } {
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext & { payload: PushEvent } {
     return context.eventName === "push";
 }
 
 export function isIssuesEvent(
-    context: GitHubContext,
-): context is ParsedGitHubContext & { payload: IssuesEvent } {
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext & { payload: IssuesEvent } {
     return context.eventName === "issues";
 }
 
 export function isIssueCommentEvent(
-    context: GitHubContext,
-): context is ParsedGitHubContext & { payload: IssueCommentEvent } {
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext & { payload: IssueCommentEvent } {
     return context.eventName === "issue_comment";
 }
 
 export function isPullRequestEvent(
-    context: GitHubContext,
-): context is ParsedGitHubContext & { payload: PullRequestEvent } {
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext & { payload: PullRequestEvent } {
     return context.eventName === "pull_request";
 }
 
 export function isPullRequestReviewEvent(
-    context: GitHubContext,
-): context is ParsedGitHubContext & { payload: PullRequestReviewEvent } {
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext & { payload: PullRequestReviewEvent } {
     return context.eventName === "pull_request_review";
 }
 
 export function isPullRequestReviewCommentEvent(
-    context: GitHubContext,
-): context is ParsedGitHubContext & { payload: PullRequestReviewCommentEvent } {
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext & { payload: PullRequestReviewCommentEvent } {
     return context.eventName === "pull_request_review_comment";
 }
 
 export function isIssuesAssignedEvent(
-    context: GitHubContext,
-): context is ParsedGitHubContext & { payload: IssuesAssignedEvent } {
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext & { payload: IssuesAssignedEvent } {
     return isIssuesEvent(context) && context.eventAction === "assigned";
 }
 
-export function isEntityContext(
-    context: GitHubContext,
-): context is ParsedGitHubContext {
-    return ENTITY_EVENT_NAMES.includes(context.eventName as EntityEventName);
+/**
+ * Checks if the context is triggered by user interaction (comments, PR/issue events)
+ */
+export function isTriggeredByUserInteraction(
+    context: JunieExecutionContext,
+): context is UserInitiatedEventContext {
+    return USER_TRIGGERED_EVENTS.includes(context.eventName as UserTriggeredEventName);
 }
 
-
-export function isAutomationContext(
-    context: GitHubContext,
-): context is AutomationContext {
-    return AUTOMATION_EVENT_NAMES.includes(
-        context.eventName as AutomationEventName,
+/**
+ * Checks if the context is triggered by automation/scheduler
+ */
+export function isTriggeredByScheduler(
+    context: JunieExecutionContext,
+): context is AutomationEventContext {
+    return SYSTEM_TRIGGERED_EVENTS.includes(
+        context.eventName as SystemTriggeredEventName,
     );
 }
 

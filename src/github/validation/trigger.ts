@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import type {GitHubContext, ParsedGitHubContext} from "../context";
+import type {JunieExecutionContext} from "../context";
 import {
     isIssueCommentEvent,
     isIssuesAssignedEvent,
@@ -11,7 +11,11 @@ import {
 } from "../context";
 import {RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP} from "../../constants/github";
 
-export function checkContainsTrigger(context: GitHubContext): boolean {
+/**
+ * Detects if the Junie trigger phrase is present in the workflow context
+ * Checks for @mentions, labels, or assignees that match Junie trigger patterns
+ */
+export function detectJunieTriggerPhrase(context: JunieExecutionContext): boolean {
     const {
         inputs: {assigneeTrigger, labelTrigger, triggerPhrase},
     } = context;
@@ -83,11 +87,11 @@ export function checkContainsTrigger(context: GitHubContext): boolean {
     return false;
 }
 
-export function isReviewOrCommentHasResolveConflictsTrigger(context: GitHubContext) {
+export function isReviewOrCommentHasResolveConflictsTrigger(context: JunieExecutionContext) {
     return isReviewOrCommentHasTrigger(context, RESOLVE_CONFLICTS_TRIGGER_PHRASE_REGEXP)
 }
 
-export function isReviewOrCommentHasTrigger(context: GitHubContext, regExp: RegExp) {
+export function isReviewOrCommentHasTrigger(context: JunieExecutionContext, regExp: RegExp) {
     if (
         isPullRequestReviewEvent(context) &&
         (context.eventAction === "submitted" || context.eventAction === "edited")

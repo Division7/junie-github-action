@@ -1,12 +1,12 @@
 import {describe, test, expect} from "bun:test";
 import {NewGitHubPromptFormatter} from "./new-prompt-formatter";
-import {GitHubContext} from "../context";
+import {JunieExecutionContext} from "../context";
 import {FetchedData, GraphQLPullRequest, GraphQLIssue} from "../api/queries";
 
 describe("NewGitHubPromptFormatter", () => {
     const formatter = new NewGitHubPromptFormatter();
 
-    const createMockContext = (overrides: Partial<GitHubContext> = {}): GitHubContext => ({
+    const createMockContext = (overrides: Partial<JunieExecutionContext> = {}): JunieExecutionContext => ({
         runId: "123",
         workflow: "test",
         eventName: "pull_request",

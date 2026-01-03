@@ -1,21 +1,23 @@
 import * as core from "@actions/core";
-import {GitHubContext, isEntityContext, isPushEvent, isWorkflowDispatchEvent} from "../context";
+import {JunieExecutionContext, isTriggeredByUserInteraction, isPushEvent, isWorkflowDispatchEvent} from "../context";
 import {checkHumanActor} from "../validation/actor";
-import {writeInitialFeedbackComment} from "../operations/comments/feedback";
-import {setupBranch} from "../operations/branch";
+import {postJunieWorkingStatusComment} from "../operations/comments/feedback";
+import {initializeJunieWorkspace} from "../operations/branch";
 import {PrepareJunieOptions} from "./types/junie";
-import {checkContainsTrigger} from "../validation/trigger";
-import {gitAuth} from "../operations/auth";
+import {detectJunieTriggerPhrase} from "../validation/trigger";
+import {configureGitCredentials} from "../operations/auth";
 import {prepareMcpConfig} from "../../mcp/prepare-mcp-config";
-import {checkWritePermissions} from "../validation/permissions";
+import {verifyRepositoryAccess} from "../validation/permissions";
 import {Octokits} from "../api/client";
 import {prepareJunieTask} from "./junie-tasks";
 import {prepareJunieCLIToken} from "./junie-token";
 import {OUTPUT_VARS} from "../../constants/environment";
 import {RESOLVE_CONFLICTS_ACTION} from "../../constants/github";
 
-
-export async function prepare({
+/**
+ * Initializes Junie execution by preparing environment, auth, and workflow context
+ */
+export async function initializeJunieExecution({
                                   context,
                                   octokit,
                                   tokenConfig,
@@ -32,11 +34,11 @@ export async function prepare({
 
     await prepareJunieCLIToken(context)
 
-    await gitAuth(context, tokenConfig)
+    await configureGitCredentials(context, tokenConfig)
 
-    await writeInitialFeedbackComment(octokit.rest, context);
+    await postJunieWorkingStatusComment(octokit.rest, context);
 
-    const branchInfo = await setupBranch(octokit, context);
+    const branchInfo = await initializeJunieWorkspace(octokit, context);
     const mcpServers = context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : []
     console.log(`MCP Servers: ${mcpServers}`)
 
@@ -54,9 +56,9 @@ export async function prepare({
     await prepareJunieTask(context, branchInfo, octokit)
 }
 
-async function shouldHandle(context: GitHubContext, octokit: Octokits): Promise<boolean> {
-    if (isEntityContext(context)) {
-        const hasWritePermissions = await checkWritePermissions(
+async function shouldHandle(context: JunieExecutionContext, octokit: Octokits): Promise<boolean> {
+    if (isTriggeredByUserInteraction(context)) {
+        const hasWritePermissions = await verifyRepositoryAccess(
             octokit.rest,
             context,
         );
@@ -74,11 +76,11 @@ async function shouldHandle(context: GitHubContext, octokit: Octokits): Promise<
         return await shouldResolveConflicts(context, octokit)
     }
 
-    return isEntityContext(context) && checkContainsTrigger(context) && checkHumanActor(octokit.rest, context);
+    return isTriggeredByUserInteraction(context) && detectJunieTriggerPhrase(context) && checkHumanActor(octokit.rest, context);
 }
 
 
-async function shouldResolveConflicts(context: GitHubContext, octokit: Octokits): Promise<boolean> {
+async function shouldResolveConflicts(context: JunieExecutionContext, octokit: Octokits): Promise<boolean> {
     console.log('Checking for conflicts...')
     if (isWorkflowDispatchEvent(context)) {
         return true;
@@ -122,7 +124,7 @@ async function shouldResolveConflicts(context: GitHubContext, octokit: Octokits)
     return false
 }
 
-async function handlePr(context: GitHubContext, octokit: Octokits, pr: any) {
+async function handlePr(context: JunieExecutionContext, octokit: Octokits, pr: any) {
     const maxAttempts = 10
     const delay = 6000
     const {owner, name} = context.payload.repository

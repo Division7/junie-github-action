@@ -9,8 +9,8 @@ import {
     isCrossReferencedEventNode
 } from "../api/queries";
 import {
-    GitHubContext,
-    isEntityContext,
+    JunieExecutionContext,
+    isTriggeredByUserInteraction,
     isIssueCommentEvent,
     isIssuesEvent,
     isPullRequestEvent,
@@ -21,7 +21,7 @@ import {
 
 export class NewGitHubPromptFormatter {
 
-    generatePrompt(context: GitHubContext, fetchedData: FetchedData, userPrompt?: string, attachGithubContextToCustomPrompt: boolean = true) {
+    generatePrompt(context: JunieExecutionContext, fetchedData: FetchedData, userPrompt?: string, attachGithubContextToCustomPrompt: boolean = true) {
         // If user provided custom prompt and doesn't want GitHub context, return only the prompt
         if (userPrompt && !attachGithubContextToCustomPrompt) {
             return userPrompt;
@@ -48,7 +48,7 @@ ${actorInfo ? actorInfo : ""}
 `
     }
 
-    private getUserInstruction(context: GitHubContext, customPrompt?: string): string | undefined {
+    private getUserInstruction(context: JunieExecutionContext, customPrompt?: string): string | undefined {
         let githubUserInstruction
         if (isPullRequestEvent(context)) {
             githubUserInstruction = context.payload.pull_request.body
@@ -66,11 +66,11 @@ ${actorInfo ? actorInfo : ""}
         ${customPrompt || githubUserInstruction}
 </user_instruction>`: undefined}
 
-    private getPrOrIssueInfo(context: GitHubContext, fetchedData: FetchedData): string | undefined {
+    private getPrOrIssueInfo(context: JunieExecutionContext, fetchedData: FetchedData): string | undefined {
         if (context.isPR) {
             const prInfo = this.getPrInfo(fetchedData);
             return prInfo ? `<pull_request_info>\n${prInfo}\n</pull_request_info>` : undefined;
-        } else if (isEntityContext(context) && !isPushEvent(context)) {
+        } else if (isTriggeredByUserInteraction(context) && !isPushEvent(context)) {
             const issueInfo = this.getIssueInfo(fetchedData);
             return issueInfo ? `<issue_info>\n${issueInfo}\n</issue_info>` : undefined;
         }
@@ -254,7 +254,7 @@ ${body}`;
         }).join('\n');
     }
 
-    private getRepositoryInfo(context: GitHubContext) {
+    private getRepositoryInfo(context: JunieExecutionContext) {
         const repo = context.payload.repository;
         return `<repository>
 Repository: ${repo.full_name}
@@ -262,7 +262,7 @@ Owner: ${repo.owner.login}
 </repository>`
     }
 
-    private getActorInfo(context: GitHubContext) {
+    private getActorInfo(context: JunieExecutionContext) {
         return `<actor>
 Triggered by: @${context.actor}
 Event: ${context.eventName}${context.eventAction ? ` (${context.eventAction})` : ""}

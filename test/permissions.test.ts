@@ -1,9 +1,9 @@
 import { describe, test, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { checkWritePermissions } from "../src/github/validation/permissions";
+import { verifyRepositoryAccess } from "../src/github/validation/permissions";
 import { mockIssueCommentContext } from "./mockContext";
 import type { Octokit } from "@octokit/rest";
 import * as core from "@actions/core";
-import {ParsedGitHubContext} from "../src/github/context";
+import {UserInitiatedEventContext} from "../src/github/context";
 
 describe("Permission Validation", () => {
   let getCollaboratorPermissionLevelSpy: any;
@@ -35,7 +35,7 @@ describe("Permission Validation", () => {
     coreErrorSpy.mockRestore();
   });
 
-  describe("checkWritePermissions", () => {
+  describe("verifyRepositoryAccess", () => {
     test("should return true for admin permission", async () => {
       getCollaboratorPermissionLevelSpy = spyOn(
         mockOctokit.repos,
@@ -44,7 +44,7 @@ describe("Permission Validation", () => {
         data: { permission: "admin" },
       } as any);
 
-      const result = await checkWritePermissions(mockOctokit, mockIssueCommentContext);
+      const result = await verifyRepositoryAccess(mockOctokit, mockIssueCommentContext);
 
       expect(result).toBe(true);
       expect(coreInfoSpy).toHaveBeenCalledWith(
@@ -60,7 +60,7 @@ describe("Permission Validation", () => {
         data: { permission: "write" },
       } as any);
 
-      const result = await checkWritePermissions(mockOctokit, mockIssueCommentContext);
+      const result = await verifyRepositoryAccess(mockOctokit, mockIssueCommentContext);
 
       expect(result).toBe(true);
       expect(coreInfoSpy).toHaveBeenCalledWith(
@@ -76,7 +76,7 @@ describe("Permission Validation", () => {
         data: { permission: "read" },
       } as any);
 
-      const result = await checkWritePermissions(mockOctokit, mockIssueCommentContext);
+      const result = await verifyRepositoryAccess(mockOctokit, mockIssueCommentContext);
 
       expect(result).toBe(false);
       expect(coreWarningSpy).toHaveBeenCalledWith(
@@ -92,7 +92,7 @@ describe("Permission Validation", () => {
         data: { permission: "none" },
       } as any);
 
-      const result = await checkWritePermissions(mockOctokit, mockIssueCommentContext);
+      const result = await verifyRepositoryAccess(mockOctokit, mockIssueCommentContext);
 
       expect(result).toBe(false);
       expect(coreWarningSpy).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ describe("Permission Validation", () => {
         actor: "junie-bot[bot]",
       };
 
-      const result = await checkWritePermissions(mockOctokit, context);
+      const result = await verifyRepositoryAccess(mockOctokit, context);
 
       expect(result).toBe(true);
       expect(coreInfoSpy).toHaveBeenCalledWith("Actor is a GitHub App: junie-bot[bot]");
@@ -122,7 +122,7 @@ describe("Permission Validation", () => {
         data: { permission: "write" },
       } as any);
 
-      await checkWritePermissions(mockOctokit, mockIssueCommentContext);
+      await verifyRepositoryAccess(mockOctokit, mockIssueCommentContext);
 
       expect(getCollaboratorPermissionLevelSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -138,7 +138,7 @@ describe("Permission Validation", () => {
       ).mockRejectedValue(new Error("API Error"));
 
       expect(
-        checkWritePermissions(mockOctokit, mockIssueCommentContext)
+        verifyRepositoryAccess(mockOctokit, mockIssueCommentContext)
       ).rejects.toThrow(/Failed to check permissions for "contributor-user" on test-owner\/test-repo/);
 
       expect(coreErrorSpy).toHaveBeenCalled();
@@ -151,7 +151,7 @@ describe("Permission Validation", () => {
       ).mockRejectedValue(new Error("Network timeout"));
 
       expect(
-        checkWritePermissions(mockOctokit, mockIssueCommentContext)
+        verifyRepositoryAccess(mockOctokit, mockIssueCommentContext)
       ).rejects.toThrow(/Network timeout/);
     });
 
@@ -163,7 +163,7 @@ describe("Permission Validation", () => {
         data: { permission: "admin" },
       } as any);
 
-      await checkWritePermissions(mockOctokit, mockIssueCommentContext);
+      await verifyRepositoryAccess(mockOctokit, mockIssueCommentContext);
 
       expect(coreInfoSpy).toHaveBeenCalledWith(
         "Checking permissions for actor: contributor-user"
@@ -191,9 +191,9 @@ describe("Permission Validation", () => {
             name: "awesome-project",
           },
         },
-      } as ParsedGitHubContext;
+      } as UserInitiatedEventContext;
 
-      await checkWritePermissions(mockOctokit, context);
+      await verifyRepositoryAccess(mockOctokit, context);
 
       expect(getCollaboratorPermissionLevelSpy).toHaveBeenCalledWith({
         owner: "acme-corp",
@@ -216,7 +216,7 @@ describe("Permission Validation", () => {
           actor: botName,
         };
 
-        const result = await checkWritePermissions(mockOctokit, context);
+        const result = await verifyRepositoryAccess(mockOctokit, context);
         expect(result).toBe(true);
         expect(coreInfoSpy).toHaveBeenCalledWith(
           `Actor is a GitHub App: ${botName}`

@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, spyOn, mock } from "bun:test";
 import {
-  writeInitialFeedbackComment,
-  writeFinishFeedbackComment,
+  postJunieWorkingStatusComment,
+  postJunieCompletionComment,
 } from "../src/github/operations/comments/feedback";
 import type {FinishFeedbackData} from "../src/github/operations/comments/types";
 import {
@@ -13,7 +13,7 @@ import type { Octokit } from "@octokit/rest";
 import type { PullRequestReviewCommentEvent } from "@octokit/webhooks-types";
 import * as core from "@actions/core";
 import * as clientModule from "../src/github/api/client";
-import {GitHubContext} from "../src/github/context";
+import {JunieExecutionContext} from "../src/github/context";
 import {createJunieCommentMarker} from "../src/constants/github";
 
 describe("Comment Feedback Operations", () => {
@@ -50,8 +50,8 @@ describe("Comment Feedback Operations", () => {
     updateReviewCommentSpy = mockOctokit.rest.pulls.updateReviewComment;
     listReviewCommentsSpy = mockOctokit.rest.pulls.listReviewComments;
 
-    // Mock createOctokit to return Octokits structure
-    createOctokitSpy = spyOn(clientModule, "createOctokit").mockReturnValue({
+    // Mock buildGitHubApiClient to return Octokits structure
+    createOctokitSpy = spyOn(clientModule, "buildGitHubApiClient").mockReturnValue({
       rest: mockOctokit,
       graphql: {} as any,
     } as any);
@@ -64,9 +64,9 @@ describe("Comment Feedback Operations", () => {
     setOutputSpy.mockRestore();
   });
 
-  describe("writeInitialFeedbackComment", () => {
+  describe("postJunieWorkingStatusComment", () => {
     test("should create comment on issue", async () => {
-      const commentId = await writeInitialFeedbackComment(
+      const commentId = await postJunieWorkingStatusComment(
         mockOctokit,
         mockIssueCommentContext
       );
@@ -82,7 +82,7 @@ describe("Comment Feedback Operations", () => {
     });
 
     test("should create comment on PR", async () => {
-      const commentId = await writeInitialFeedbackComment(
+      const commentId = await postJunieWorkingStatusComment(
         mockOctokit,
         mockPullRequestCommentContext
       );
@@ -97,7 +97,7 @@ describe("Comment Feedback Operations", () => {
     });
 
     test("should create reply for review comment", async () => {
-      const commentId = await writeInitialFeedbackComment(
+      const commentId = await postJunieWorkingStatusComment(
         mockOctokit,
         mockPullRequestReviewCommentContext
       );
@@ -117,16 +117,16 @@ describe("Comment Feedback Operations", () => {
         ...mockIssueCommentContext,
         entityNumber: undefined,
         eventName: "workflow_dispatch" as const,
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, context);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, context);
 
       expect(commentId).toBeUndefined();
       expect(createCommentSpy).not.toHaveBeenCalled();
     });
 
     test("should include job run link in comment body", async () => {
-      await writeInitialFeedbackComment(mockOctokit, mockIssueCommentContext);
+      await postJunieWorkingStatusComment(mockOctokit, mockIssueCommentContext);
 
       expect(createCommentSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -141,7 +141,7 @@ describe("Comment Feedback Operations", () => {
       createCommentSpy.mockRejectedValue(new Error("API Error"));
 
         expect(
-            writeInitialFeedbackComment(mockOctokit, mockIssueCommentContext)
+            postJunieWorkingStatusComment(mockOctokit, mockIssueCommentContext)
         ).rejects.toThrow("API Error");
     });
 
@@ -152,9 +152,9 @@ describe("Comment Feedback Operations", () => {
           ...mockIssueCommentContext.inputs,
           silentMode: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, silentModeContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, silentModeContext);
 
       expect(commentId).toBeUndefined();
       expect(createCommentSpy).not.toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe("Comment Feedback Operations", () => {
     });
 
     test("should include Junie marker in comment body", async () => {
-      await writeInitialFeedbackComment(mockOctokit, mockIssueCommentContext);
+      await postJunieWorkingStatusComment(mockOctokit, mockIssueCommentContext);
 
       const marker = createJunieCommentMarker(mockIssueCommentContext.workflow);
       expect(createCommentSpy).toHaveBeenCalledWith(
@@ -179,12 +179,12 @@ describe("Comment Feedback Operations", () => {
           ...mockIssueCommentContext.inputs,
           useSingleComment: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
       // Mock listComments to return no existing Junie comments
       listCommentsSpy.mockResolvedValue({ data: [] });
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, singleCommentContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, singleCommentContext);
 
       expect(commentId).toBe(12345);
       expect(listCommentsSpy).toHaveBeenCalledTimes(1);
@@ -199,7 +199,7 @@ describe("Comment Feedback Operations", () => {
           ...mockIssueCommentContext.inputs,
           useSingleComment: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
       // Mock listComments to return an existing Junie comment
       listCommentsSpy.mockResolvedValue({
@@ -209,7 +209,7 @@ describe("Comment Feedback Operations", () => {
         ],
       });
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, singleCommentContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, singleCommentContext);
 
       expect(commentId).toBe(99999);
       expect(listCommentsSpy).toHaveBeenCalledTimes(1);
@@ -228,7 +228,7 @@ describe("Comment Feedback Operations", () => {
           ...mockIssueCommentContext.inputs,
           useSingleComment: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
       // Mock listComments to return multiple Junie comments
       listCommentsSpy.mockResolvedValue({
@@ -239,7 +239,7 @@ describe("Comment Feedback Operations", () => {
         ],
       });
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, singleCommentContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, singleCommentContext);
 
       // Should use the most recent (last in array) Junie comment
       expect(commentId).toBe(33333);
@@ -258,7 +258,7 @@ describe("Comment Feedback Operations", () => {
           ...mockPullRequestReviewCommentContext.inputs,
           useSingleComment: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
       const parentCommentId = (mockPullRequestReviewCommentContext.payload as PullRequestReviewCommentEvent).comment.id;
 
@@ -269,7 +269,7 @@ describe("Comment Feedback Operations", () => {
         ],
       });
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, singleCommentContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, singleCommentContext);
 
       expect(commentId).toBe(88888);
       expect(listReviewCommentsSpy).toHaveBeenCalledTimes(1);
@@ -284,7 +284,7 @@ describe("Comment Feedback Operations", () => {
           ...mockPullRequestReviewCommentContext.inputs,
           useSingleComment: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
       const parentCommentId = (mockPullRequestReviewCommentContext.payload as PullRequestReviewCommentEvent).comment.id;
 
@@ -300,7 +300,7 @@ describe("Comment Feedback Operations", () => {
         ],
       });
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, singleCommentContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, singleCommentContext);
 
       // Should find the comment from our thread (22222), not from other threads
       expect(commentId).toBe(22222);
@@ -319,7 +319,7 @@ describe("Comment Feedback Operations", () => {
           ...mockPullRequestReviewCommentContext.inputs,
           useSingleComment: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
       const parentCommentId = (mockPullRequestReviewCommentContext.payload as PullRequestReviewCommentEvent).comment.id;
 
@@ -333,7 +333,7 @@ describe("Comment Feedback Operations", () => {
         ],
       });
 
-      const commentId = await writeInitialFeedbackComment(mockOctokit, singleCommentContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, singleCommentContext);
 
       // Should find the parent comment itself
       expect(commentId).toBe(parentCommentId);
@@ -346,13 +346,13 @@ describe("Comment Feedback Operations", () => {
           ...mockIssueCommentContext.inputs,
           useSingleComment: true,
         },
-      } as GitHubContext;
+      } as JunieExecutionContext;
 
       // Mock listComments to throw an error
       listCommentsSpy.mockRejectedValue(new Error("API Error"));
 
       // Should fall back to creating a new comment
-      const commentId = await writeInitialFeedbackComment(mockOctokit, singleCommentContext);
+      const commentId = await postJunieWorkingStatusComment(mockOctokit, singleCommentContext);
 
       expect(commentId).toBe(12345);
       expect(listCommentsSpy).toHaveBeenCalledTimes(1);
@@ -360,7 +360,7 @@ describe("Comment Feedback Operations", () => {
     });
   });
 
-  describe("writeFinishFeedbackComment", () => {
+  describe("postJunieCompletionComment", () => {
     const baseFinishData: Omit<FinishFeedbackData, "isJobFailed" | "successData" | "failureData"> = {
       initCommentId: "12345",
       parsedContext: mockIssueCommentContext,
@@ -378,7 +378,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -400,7 +400,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -423,7 +423,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -446,7 +446,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -467,7 +467,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -486,7 +486,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -505,7 +505,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -527,7 +527,7 @@ describe("Comment Feedback Operations", () => {
         },
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateReviewCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
@@ -545,7 +545,7 @@ describe("Comment Feedback Operations", () => {
         failureData: {},
       };
 
-      await writeFinishFeedbackComment(mockOctokit, data);
+      await postJunieCompletionComment(mockOctokit, data);
 
       expect(updateCommentSpy).toHaveBeenCalledWith({
         owner: "test-owner",
