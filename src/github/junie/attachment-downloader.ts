@@ -1,5 +1,6 @@
 import {writeFile, mkdir} from "fs/promises";
 import {join} from "path";
+import mime from "mime-types";
 import {JiraAttachment} from "../context";
 import {getJiraClient} from "../jira/client";
 
@@ -25,7 +26,19 @@ async function downloadFile(url: string): Promise<string> {
 
     await mkdir(DOWNLOAD_DIR, {recursive: true});
 
-    const filename = url.split('/').pop() || `attachment-${Date.now()}`;
+    let filename = url.split('/').pop() || `attachment-${Date.now()}`;
+
+    // If filename doesn't have extension, try to get it from Content-Type
+    if (!filename.includes('.')) {
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+            const ext = mime.extension(contentType);
+            if (ext) {
+                filename = `${filename}.${ext}`;
+            }
+        }
+    }
+
     const localPath = join(DOWNLOAD_DIR, filename);
 
     await writeFile(localPath, buffer);
