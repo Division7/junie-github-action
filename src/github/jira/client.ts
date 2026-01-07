@@ -15,20 +15,20 @@ export const JIRA_TRANSITIONS = {
 /**
  * Jira API client wrapper
  */
-export class JiraClient {
+class JiraClient {
 
     private readonly client: Version3Client;
+    private readonly email = process.env.JIRA_EMAIL;
+    private readonly apiToken = process.env.JIRA_API_TOKEN;
 
     constructor() {
         this.client = this.createClient();
     }
 
     private createClient(): Version3Client {
-        const email = process.env.JIRA_EMAIL;
-        const apiToken = process.env.JIRA_API_TOKEN;
         const jiraBaseUrl = process.env.JIRA_BASE_URL;
 
-        if (!email || !apiToken || !jiraBaseUrl) {
+        if (!this.email || !this.apiToken || !jiraBaseUrl) {
             throw new Error('⚠️ Jira credentials not found. Set JIRA_EMAIL, JIRA_API_TOKEN, and JIRA_BASE_URL to enable Jira integration.');
         }
 
@@ -36,8 +36,8 @@ export class JiraClient {
             host: jiraBaseUrl,
             authentication: {
                 basic: {
-                    email,
-                    apiToken,
+                    email: this.email,
+                    apiToken: this.apiToken,
                 },
             },
         });
@@ -106,4 +106,43 @@ export class JiraClient {
     async moveIssueToReview(issueKey: string): Promise<boolean> {
         return await this.transitionIssue(issueKey, JIRA_TRANSITIONS.IN_REVIEW);
     }
+
+    /**
+     * Downloads an attachment from Jira
+     *
+     * @param url - Full URL to the attachment (e.g., https://domain.atlassian.net/rest/api/2/attachment/content/10000)
+     * @returns Buffer containing the file data
+     */
+    async downloadAttachment(url: string): Promise<Buffer> {
+        console.log(`Downloading attachment from ${url}`);
+
+        const auth = Buffer.from(`${this.email}:${this.apiToken}`).toString('base64');
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Basic ${auth}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to download attachment from ${url}: ${response.status} ${response.statusText}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+    }
+}
+
+// Singleton instance
+let jiraClientInstance: JiraClient | null = null;
+
+/**
+ * Get the singleton instance of JiraClient
+ * @returns JiraClient instance
+ */
+export function getJiraClient(): JiraClient {
+    if (!jiraClientInstance) {
+        jiraClientInstance = new JiraClient();
+    }
+    return jiraClientInstance;
 }

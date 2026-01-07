@@ -19,10 +19,25 @@ import {OUTPUT_VARS} from "../constants/environment";
 import {DEFAULT_TRIGGER_PHRASE, JIRA_EVENT_ACTION, RESOLVE_CONFLICTS_ACTION} from "../constants/github";
 
 // Jira integration types
+export type JiraComment = {
+    author: string;
+    body: string;
+    created: string;
+};
+
+export type JiraAttachment = {
+    filename: string;
+    mimeType: string;
+    size: number;
+    content: string;  // URL to download the attachment
+};
+
 export type JiraIssuePayload = WorkflowDispatchEvent & {
     issueKey: string;
     issueSummary: string;
     issueDescription: string;
+    comments: JiraComment[];
+    attachments: JiraAttachment[];
     action: typeof JIRA_EVENT_ACTION;
 };
 
@@ -304,6 +319,23 @@ function extractJiraEventData(workflowPayload: WorkflowDispatchEvent, context: J
         throw new Error(`Missing Jira issue data in workflow payload: ${JSON.stringify(workflowPayload)}`);
     }
 
+    // Parse comments and attachments JSON arrays (default to empty arrays)
+    const comments = workflowPayload.inputs?.issue_comments
+        ? JSON.parse(workflowPayload.inputs.issue_comments as string)
+        : [];
+
+    const attachments = workflowPayload.inputs?.issue_attachments
+        ? JSON.parse(workflowPayload.inputs.issue_attachments as string)
+        : [];
+
+    if (comments.length > 0) {
+        console.log(`✓ Parsed ${comments.length} comment(s) from Jira issue`);
+    }
+
+    if (attachments.length > 0) {
+        console.log(`✓ Parsed ${attachments.length} attachment(s) from Jira issue`);
+    }
+
     console.log(`✓ Jira issue detected: ${issueKey} - ${issueSummary}`);
 
     // Return Jira-specific context with JiraWorkflowDispatchEvent payload
@@ -315,6 +347,8 @@ function extractJiraEventData(workflowPayload: WorkflowDispatchEvent, context: J
             issueKey,
             issueSummary,
             issueDescription: issueDescription || '',
+            comments,
+            attachments,
             action: JIRA_EVENT_ACTION,
         },
     };

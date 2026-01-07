@@ -21,7 +21,7 @@ import {
     SUCCESS_FEEDBACK_COMMENT_WITH_RESULT
 } from "../../../constants/github";
 import type {FailureFeedbackData, FinishFeedbackData, SuccessFeedbackData} from "./types";
-import {JiraClient} from "../../jira/client";
+import {getJiraClient} from "../../jira/client";
 
 /**
  * Adds a thumbs up reaction to the trigger comment/review that started the workflow.
@@ -425,7 +425,7 @@ export async function postJunieCompletionComment(
  */
 async function postJiraFeedback(data: FinishFeedbackData): Promise<void> {
     const jiraPayload = data.parsedContext.payload as JiraIssuePayload;
-    const client = new JiraClient();
+    const client = getJiraClient();
     const {owner, name} = data.parsedContext.payload.repository;
     const ownerLogin = owner.login;
 

@@ -1,7 +1,10 @@
 import {writeFile, mkdir} from "fs/promises";
 import {join} from "path";
+import {JiraAttachment} from "../context";
+import {getJiraClient} from "../jira/client";
 
 const DOWNLOAD_DIR = "/tmp/github-attachments";
+const JIRA_DOWNLOAD_DIR = "/tmp/jira-attachments";
 
 // Export regex patterns for testing
 export const ATTACHMENT_PATTERNS = {
@@ -87,6 +90,75 @@ export async function downloadAttachmentsAndRewriteText(text: string): Promise<s
             updatedText = updatedText.replace(url, localPath);
         } catch (error) {
             console.error(`Failed to download legacy image: ${url}`, error);
+        }
+    }
+
+    return updatedText;
+}
+
+/**
+ * Jira Wiki Markup pattern for attachments: !filename.ext! or !filename.ext|parameters!
+ */
+export const JIRA_ATTACHMENT_PATTERN = /!([^!|\s]+\.[a-zA-Z0-9]+)(?:\|[^!]*)?!/g;
+
+/**
+ * Download a Jira attachment using JiraClient
+ */
+async function downloadJiraAttachment(url: string, filename: string): Promise<string> {
+    const client = getJiraClient();
+
+    const buffer = await client.downloadAttachment(url);
+
+    await mkdir(JIRA_DOWNLOAD_DIR, {recursive: true});
+
+    const localPath = join(JIRA_DOWNLOAD_DIR, filename);
+
+    await writeFile(localPath, buffer);
+    console.log(`✓ Downloaded Jira attachment: ${filename} -> ${localPath}`);
+
+    return localPath;
+}
+
+/**
+ * Downloads Jira attachments referenced in text and replaces wiki markup with local paths.
+ *
+ * Handles Jira wiki markup: !filename.jpg! or !filename.jpg|width=100,alt="text"!
+ *
+ * @param text - Text containing Jira wiki markup references
+ * @param attachments - Array of Jira attachments with filename and content URL
+ * @returns Text with wiki markup replaced by local file paths
+ */
+export async function downloadJiraAttachmentsAndRewriteText(
+    text: string,
+    attachments: Array<JiraAttachment>
+): Promise<string> {
+    if (attachments.length === 0) {
+        return text;
+    }
+
+    let updatedText = text;
+
+    // Find all Jira wiki markup references: !filename.ext! or !filename.ext|params!
+    const matches = [...text.matchAll(JIRA_ATTACHMENT_PATTERN)];
+
+    for (const match of matches) {
+        const fullMatch = match[0]; // Full match: !filename.jpg|width=100!
+        const filename = match[1];  // Captured filename: filename.jpg
+
+        // Find the attachment by filename
+        const attachment = attachments.find(att => att.filename === filename);
+
+        if (attachment) {
+            try {
+                const localPath = await downloadJiraAttachment(attachment.content, filename);
+                // Replace the entire wiki markup with just the local path
+                updatedText = updatedText.replace(fullMatch, localPath);
+            } catch (error) {
+                console.error(`Failed to download Jira attachment: ${filename}`, error);
+                // Keep the original markup if download fails
+            }
+        } else {
+            console.warn(`Jira attachment not found: ${filename}`);
         }
     }
 

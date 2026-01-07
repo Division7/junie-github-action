@@ -19,7 +19,7 @@ import {prepareJunieTask} from "./junie-tasks";
 import {prepareJunieCLIToken} from "./junie-token";
 import {OUTPUT_VARS} from "../../constants/environment";
 import {RESOLVE_CONFLICTS_ACTION} from "../../constants/github";
-import {JiraClient} from "../jira/client";
+import {getJiraClient} from "../jira/client";
 
 /**
  * Initializes Junie execution by preparing environment, auth, and workflow context
@@ -48,7 +48,7 @@ export async function initializeJunieExecution({
     // Start Jira issue if this is a Jira-triggered workflow
     if (isJiraWorkflowDispatchEvent(context)) {
         try {
-            const client = new JiraClient();
+            const client = getJiraClient();
             await client.startIssue(context.payload.issueKey);
         } catch (jiraError) {
             console.warn('Failed to start Jira issue:', jiraError);
