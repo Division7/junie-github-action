@@ -380,6 +380,11 @@ export async function postJunieCompletionComment(
         return;
     }
 
+    if (!data.initCommentId) {
+        console.log('No initial comment ID - skipping feedback');
+        return;
+    }
+
     let feedbackBody: string | undefined;
     if (data.isJobFailed) {
         feedbackBody = getFailedBodyWithMarker(ownerLogin, name, data.parsedContext.runId, data.failureData!, workflowName)
@@ -392,7 +397,7 @@ export async function postJunieCompletionComment(
         return;
     }
 
-    const initCommentId = +data.initCommentId!;
+    const initCommentId = +data.initCommentId;
 
     console.log(`Updating feedback comment ${initCommentId}`);
 
