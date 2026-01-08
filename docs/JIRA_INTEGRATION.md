@@ -37,7 +37,6 @@ Add the following secrets to your GitHub repository:
 By default, the integration uses these transition IDs:
 - **In Progress**: `21`
 - **In Review**: `31`
-- **Done**: `41`
 
 These IDs may vary depending on your Jira workflow. To find your transition IDs:
 
@@ -50,7 +49,6 @@ curl -u EMAIL:API_TOKEN \
 Add custom transition IDs as GitHub secrets if needed:
 - `JIRA_TRANSITION_IN_PROGRESS`
 - `JIRA_TRANSITION_IN_REVIEW`
-- `JIRA_TRANSITION_DONE`
 
 ### 4. Create GitHub Workflow
 
@@ -110,9 +108,8 @@ jobs:
           jira_email: ${{ secrets.JIRA_EMAIL }}
           jira_api_token: ${{ secrets.JIRA_API_TOKEN }}
 #          optional
-#          jira_transition_in_progress: your value if need
-#          jira_transition_in_review: your value if need
-#          jira_transition_done: your value if need
+#          jira_transition_in_progress: your value
+#          jira_transition_in_review: your value
 ```
 
 ### 5. Configure Jira Automation

@@ -9,7 +9,6 @@ import {Version3Client} from 'jira.js';
 export const JIRA_TRANSITIONS = {
     IN_PROGRESS: process.env.JIRA_TRANSITION_IN_PROGRESS || "21",
     IN_REVIEW: process.env.JIRA_TRANSITION_IN_REVIEW || "31",
-    DONE: process.env.JIRA_TRANSITION_DONE || "41",
 } as const;
 
 /**

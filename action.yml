@@ -79,10 +79,6 @@ inputs:
     description: "Jira transition ID for 'In Review' status (default: 31)"
     required: false
     default: "31"
-  jira_transition_done:
-    description: "Jira transition ID for 'Done' status (default: 41)"
-    required: false
-    default: "41"
 
   # Auth configuration
   junie_api_key:
@@ -156,7 +152,6 @@ runs:
         JIRA_API_TOKEN: ${{ inputs.jira_api_token }}
         JIRA_TRANSITION_IN_PROGRESS: ${{ inputs.jira_transition_in_progress }}
         JIRA_TRANSITION_IN_REVIEW: ${{ inputs.jira_transition_in_review }}
-        JIRA_TRANSITION_DONE: ${{ inputs.jira_transition_done }}
         ALL_INPUTS: ${{ toJson(inputs) }}
 
 
@@ -284,7 +279,6 @@ runs:
         JIRA_API_TOKEN: ${{ inputs.jira_api_token }}
         JIRA_TRANSITION_IN_PROGRESS: ${{ inputs.jira_transition_in_progress }}
         JIRA_TRANSITION_IN_REVIEW: ${{ inputs.jira_transition_in_review }}
-        JIRA_TRANSITION_DONE: ${{ inputs.jira_transition_done }}
 
     - name: Give feedback and update summary (failure)
       if: failure() && steps.prepare.outputs.SHOULD_SKIP != 'true'
@@ -309,5 +303,4 @@ runs:
         JIRA_API_TOKEN: ${{ inputs.jira_api_token }}
         JIRA_TRANSITION_IN_PROGRESS: ${{ inputs.jira_transition_in_progress }}
         JIRA_TRANSITION_IN_REVIEW: ${{ inputs.jira_transition_in_review }}
-        JIRA_TRANSITION_DONE: ${{ inputs.jira_transition_done }}
         ERROR: ${{ steps.prepare.outputs.EXCEPTION || steps.junie-run-results.outputs.EXCEPTION }}

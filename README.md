@@ -166,7 +166,6 @@ Each recipe includes complete workflows, prompts, and configuration examples you
 | `jira_api_token` | Jira API token for authentication | - |
 | `jira_transition_in_progress` | Jira transition ID for "In Progress" status | `21` |
 | `jira_transition_in_review` | Jira transition ID for "In Review" status | `31` |
-| `jira_transition_done` | Jira transition ID for "Done" status | `41` |
 
 For detailed setup instructions, see the [Jira Integration Guide](docs/JIRA_INTEGRATION.md).
 
