@@ -22,6 +22,7 @@ import {
 } from "../../../constants/github";
 import type {FailureFeedbackData, FinishFeedbackData, SuccessFeedbackData} from "./types";
 import {getJiraClient} from "../../jira/client";
+import {convertMarkdownToJiraWikiMarkup} from "../../jira/markdown-to-jira";
 
 /**
  * Adds a thumbs up reaction to the trigger comment/review that started the workflow.
@@ -454,7 +455,9 @@ async function postJiraFeedback(data: FinishFeedbackData): Promise<void> {
     }
 
     if (comment) {
-        await client.addComment(jiraPayload.issueKey, comment);
+        // Convert Markdown to Jira Wiki Markup
+        const jiraComment = convertMarkdownToJiraWikiMarkup(comment);
+        await client.addComment(jiraPayload.issueKey, jiraComment);
         console.log(`✓ Successfully updated Jira issue ${jiraPayload.issueKey}`);
     }
 }

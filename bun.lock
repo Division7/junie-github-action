@@ -10,6 +10,7 @@
         "@octokit/rest": "^22.0.1",
         "@octokit/webhooks-types": "^7.6.1",
         "jira.js": "^5.2.2",
+        "jira2md": "^3.0.1",
         "mime-types": "^3.0.2",
         "p-retry": "^7.1.0",
       },
@@ -187,7 +188,11 @@
 
     "jira.js": ["jira.js@5.2.2", "", { "dependencies": { "axios": "^1.10.0", "mime": "^4.0.7", "zod": "^3.25.76" } }, "sha512-iduKEC+MpQSq46cMbv310CZPn70xaUhbDRMlZIGJ4YKhn+GZsSjlogRPFyrNEfoqergGYi8+EZ1YcY09w+Efkw=="],
 
+    "jira2md": ["jira2md@3.0.1", "", { "dependencies": { "marked": "^4.0.12" } }, "sha512-BQlgr64fveNCT8lmTUmUcwdJwLJwGnZpNO0aeRyyFbRONZ0WiIar0iaS6V8loqbNM6pgmRilCKRhFO8tH8977Q=="],
+
     "json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
+
+    "marked": ["marked@4.3.0", "", { "bin": { "marked": "bin/marked.js" } }, "sha512-PRsaiG84bK+AMvxziE/lCFss8juXjNaWzVbN5tXAm4XjeaS9NAHhop+PjQxz2A9h8Q4M/xGmzP8vqNwy6JeK0A=="],
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 
