@@ -48,7 +48,7 @@ inputs:
   junie_version:
     description: "Version of Junie to use"
     required: false
-    default: "561.1.0"
+    default: "576.1"
   junie_work_dir:
     description: "Directory to use for Junie working files"
     required: false
