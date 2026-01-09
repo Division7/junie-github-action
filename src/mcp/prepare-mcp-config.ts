@@ -37,7 +37,7 @@ export async function prepareMcpConfig(
 
 
     if (hasGHCheksServer) {
-        const head = branchInfo.prBaseBranch ? branchInfo.baseBranch : branchInfo.workingBranch
+        const head = branchInfo.isNewBranch ? branchInfo.baseBranch : branchInfo.workingBranch
         baseMcpConfig.mcpServers.github_checks = {
             command: "bun",
             args: [
