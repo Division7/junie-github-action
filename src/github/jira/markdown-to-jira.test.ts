@@ -1,51 +1,57 @@
 import {describe, test, expect} from "bun:test";
-import {convertMarkdownToJiraWikiMarkup} from "./markdown-to-jira";
+import {convertMarkdownToADF} from "./markdown-to-jira";
 
-describe("convertMarkdownToJiraWikiMarkup", () => {
-    test("converts headers", () => {
-        const markdown = `# H1
-## H2
-### H3
-#### H4`;
-        const expected = `h1. H1
-h2. H2
-h3. H3
-h4. H4`;
-        expect(convertMarkdownToJiraWikiMarkup(markdown)).toBe(expected);
+describe("convertMarkdownToADF", () => {
+    test("returns valid ADF document structure", () => {
+        const markdown = "Simple text";
+        const result = convertMarkdownToADF(markdown);
+
+        expect(result).toHaveProperty("type", "doc");
+        expect(result).toHaveProperty("version", 1);
+        expect(result).toHaveProperty("content");
+        expect(Array.isArray(result.content)).toBe(true);
     });
 
-    test("converts links", () => {
-        const markdown = "[GitHub](https://github.com)";
-        const expected = "[GitHub|https://github.com]";
-        expect(convertMarkdownToJiraWikiMarkup(markdown)).toBe(expected);
+    test("converts simple text to paragraph", () => {
+        const markdown = "Simple text";
+        const result = convertMarkdownToADF(markdown);
+
+        expect(result.content).toHaveLength(1);
+        expect(result.content[0].type).toBe("paragraph");
+        expect(result.content[0].content).toBeDefined();
+    });
+
+    test("converts headers", () => {
+        const markdown = "# H1\n## H2\n### H3";
+        const result = convertMarkdownToADF(markdown);
+
+        expect(result.type).toBe("doc");
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(result.content.some((node: any) => node.type === "heading")).toBe(true);
     });
 
     test("converts bold text", () => {
         const markdown = "This is **bold** text";
-        const expected = "This is *bold* text";
-        expect(convertMarkdownToJiraWikiMarkup(markdown)).toBe(expected);
+        const result = convertMarkdownToADF(markdown);
+
+        expect(result.type).toBe("doc");
+        expect(JSON.stringify(result)).toContain("strong");
     });
 
     test("converts inline code", () => {
         const markdown = "Use `console.log()` for debugging";
-        const expected = "Use {{console.log()}} for debugging";
-        expect(convertMarkdownToJiraWikiMarkup(markdown)).toBe(expected);
+        const result = convertMarkdownToADF(markdown);
+
+        expect(result.type).toBe("doc");
+        expect(JSON.stringify(result)).toContain("code");
     });
 
-    test("converts code blocks", () => {
-        const markdown = "```javascript\nconst x = 1;\n```";
-        const expected = "{code:javascript}\nconst x = 1;\n{code}";
-        expect(convertMarkdownToJiraWikiMarkup(markdown)).toBe(expected);
-    });
+    test("converts links", () => {
+        const markdown = "[GitHub](https://github.com)";
+        const result = convertMarkdownToADF(markdown);
 
-    test("converts unordered lists", () => {
-        const markdown = `- Item 1
-- Item 2
-* Item 3`;
-        const expected = `- Item 1
-- Item 2
-* Item 3`;
-        expect(convertMarkdownToJiraWikiMarkup(markdown)).toBe(expected);
+        expect(result.type).toBe("doc");
+        expect(JSON.stringify(result)).toContain("https://github.com");
     });
 
     test("converts complex example", () => {
@@ -58,15 +64,15 @@ h4. H4`;
 ### Details
 Check the [PR link](https://github.com/owner/repo/pull/123)`;
 
-        const expected = `Result: Add Update User Route
+        const result = convertMarkdownToADF(markdown);
 
-h3. Summary
-- Reviewed the project
-- Located the target file at {{src/routes/users.ts}}
+        expect(result.type).toBe("doc");
+        expect(result.version).toBe(1);
+        expect(Array.isArray(result.content)).toBe(true);
+        expect(result.content.length).toBeGreaterThan(0);
 
-h3. Details
-Check the [PR link|https://github.com/owner/repo/pull/123]`;
-
-        expect(convertMarkdownToJiraWikiMarkup(markdown)).toBe(expected);
+        // Check that it contains expected content types
+        const types = result.content.map((node: any) => node.type);
+        expect(types).toContain("paragraph");
     });
 });

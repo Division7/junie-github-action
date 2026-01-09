@@ -10,11 +10,11 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.1",
-    "@modelcontextprotocol/sdk": "^1.21.0",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@octokit/rest": "^22.0.1",
     "@octokit/webhooks-types": "^7.6.1",
     "jira.js": "^5.2.2",
-    "jira2md": "^3.0.1",
+    "marklassian": "^1.1.0",
     "mime-types": "^3.0.2",
     "p-retry": "^7.1.0"
   },

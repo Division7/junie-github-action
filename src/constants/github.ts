@@ -69,7 +69,7 @@ export const COMMIT_MESSAGE_TEMPLATE = (junieTitle: string, issueId?: number) =>
 // Feedback Comments
 // ============================================================================
 
-export const SUCCESS_FEEDBACK_COMMENT = "Junie is successful finished!"
+export const SUCCESS_FEEDBACK_COMMENT = "Junie successfully finished!"
 
 export const ERROR_FEEDBACK_COMMENT_TEMPLATE = (details: string, jobLink: string) => `Junie is failed!
 

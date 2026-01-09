@@ -72,16 +72,16 @@ class JiraClient {
      * Adds a comment to a Jira issue
      *
      * @param issueKey - Jira issue key (e.g., PROJ-123)
-     * @param comment - Comment text (supports Jira markdown)
+     * @param adfDocument - Comment in Atlassian Document Format (ADF)
      * @returns true if successful, false otherwise
      */
-    async addComment(issueKey: string, comment: string): Promise<boolean> {
+    async addComment(issueKey: string, adfDocument: any): Promise<boolean> {
         try {
             console.log(`Adding comment to Jira issue ${issueKey}`);
 
             await this.client.issueComments.addComment({
                 issueIdOrKey: issueKey,
-                comment: comment,
+                comment: adfDocument,
             });
 
             console.log(`✓ Successfully added comment to Jira issue ${issueKey}`);
