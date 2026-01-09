@@ -1,7 +1,7 @@
 import {describe, test, expect} from "bun:test";
-import {NewGitHubPromptFormatter} from "./new-prompt-formatter";
-import {JunieExecutionContext} from "../context";
-import {FetchedData, GraphQLPullRequest, GraphQLIssue} from "../api/queries";
+import {NewGitHubPromptFormatter} from "../src/github/junie/new-prompt-formatter";
+import {JunieExecutionContext} from "../src/github/context";
+import {FetchedData, GraphQLPullRequest, GraphQLIssue} from "../src/github/api/queries";
 
 describe("NewGitHubPromptFormatter", () => {
     const formatter = new NewGitHubPromptFormatter();
