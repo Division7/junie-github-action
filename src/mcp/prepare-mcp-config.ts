@@ -21,7 +21,7 @@ type PrepareConfigParams = {
 
 export async function prepareMcpConfig(
     params: PrepareConfigParams,
-): Promise<string> {
+): Promise<{ configPath: string; enabledServers: string[] }> {
     const {
         githubToken,
         owner,
@@ -41,6 +41,9 @@ export async function prepareMcpConfig(
         mcpServers: {},
     };
 
+    // Track which servers are actually enabled
+    const enabledServers: string[] = [];
+
     // Automatically enable comment server if initCommentId is available
     if (initCommentId !== undefined) {
         console.log(`Enabling GitHub Comment MCP Server for comment ID: ${initCommentId}`);
@@ -58,6 +61,7 @@ export async function prepareMcpConfig(
                 JUNIE_COMMENT_ID: String(initCommentId),
             },
         };
+        enabledServers.push('mcp_github_comment_server');
     }
 
     // Automatically enable inline comment server for PRs
@@ -78,6 +82,7 @@ export async function prepareMcpConfig(
                 COMMIT_SHA: commitSha,
             },
         };
+        enabledServers.push('mcp_github_inline_comment_server');
     }
 
     if (hasGHCheksServer) {
@@ -96,6 +101,7 @@ export async function prepareMcpConfig(
                 HEAD_SHA: `heads/${head}`,
             },
         };
+        enabledServers.push('mcp_github_checks_server');
     }
 
     const configJsonString = JSON.stringify(baseMcpConfig, null, 2);
@@ -109,5 +115,10 @@ export async function prepareMcpConfig(
     const mcpConfigPath = join(junieCMPDir, 'mcp.json');
     await writeFile(mcpConfigPath, configJsonString, 'utf-8');
 
-    return configJsonString;
+    console.log(`Enabled MCP servers: ${enabledServers.join(', ')}`);
+
+    return {
+        configPath: mcpConfigPath,
+        enabledServers,
+    };
 }

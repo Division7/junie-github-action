@@ -58,7 +58,7 @@ export async function initializeJunieExecution({
 
     const branchInfo = await initializeJunieWorkspace(octokit, context);
     const mcpServers = context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : []
-    console.log(`MCP Servers: ${mcpServers}`)
+    console.log(`MCP Servers enabled by user: ${mcpServers}`)
 
     // Get PR-specific info
     let commitSha
@@ -71,7 +71,7 @@ export async function initializeJunieExecution({
     // Prepare MCP configuration with automatic server activation
     // - Comment server: enabled if initCommentId is available
     // - Inline comment server: enabled for PRs (requires commitSha)
-    await prepareMcpConfig({
+    const mcpConfig = await prepareMcpConfig({
         junieWorkingDir: context.inputs.junieWorkingDir,
         allowedMcpServers: mcpServers,
         githubToken: tokenConfig.workingToken,
@@ -83,7 +83,7 @@ export async function initializeJunieExecution({
         commitSha: commitSha
     })
 
-    await prepareJunieTask(context, branchInfo, octokit)
+    await prepareJunieTask(context, branchInfo, octokit, mcpConfig.enabledServers)
 }
 
 async function shouldHandle(context: JunieExecutionContext, octokit: Octokits): Promise<boolean> {

@@ -287,7 +287,7 @@ jobs:
             CI workflow "${{ github.event.workflow_run.name }}" failed. Diagnose, provide analytics and suggest fix.
 
             **Analysis:**
-            1. Use `get_pr_failed_checks_info` MCP tool to fetch error logs
+            1. Retrieve detailed information about failed CI/CD checks
             2. Identify failing step and error message
             3. Determine root cause (test/build error, timeout, flaky test)
             4. Check recent commits that might have caused it
