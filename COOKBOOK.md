@@ -94,6 +94,7 @@ name: Code Review
 on:
   pull_request:
     types: [opened, synchronize]
+    branches: [main]
 
 jobs:
   review:
@@ -191,8 +192,7 @@ name: Sync Documentation
 on:
   pull_request:
     types: [closed]
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   update-docs:
@@ -337,6 +337,7 @@ name: Security Audit
 on:
   pull_request:
     types: [opened, synchronize]
+    branches: [main]
 
 jobs:
   audit:
