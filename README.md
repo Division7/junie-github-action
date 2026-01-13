@@ -158,7 +158,7 @@ Each recipe includes complete workflows, prompts, and configuration examples you
     allowed_mcp_servers: "mcp_github_checks_server"
 ```
 
-**Note**: The `inline_comment` server is automatically enabled for all pull request events - no manual configuration needed.
+**Note**: The `mcp_github_inline_comment_server` is automatically enabled for all pull request events - no manual configuration needed.
 
 #### Advanced Features
 
@@ -227,7 +227,8 @@ permissions:
   contents: write      # Required to create branches, make commits, and push changes
   pull-requests: write # Required to create PRs, add comments to PRs, and update PR status
   issues: write        # Required to add comments to issues and update issue metadata
-  checks: read         # Optional: only needed for CI failure analysis with MCP servers
+  checks: read         # Optional: needed for CI failure analysis with MCP servers
+  actions: read        # Optional: needed for CI failure analysis with MCP servers (to fetch logs)
 ```
 
 **Minimal permissions** for `silent_mode` (read-only operations):
