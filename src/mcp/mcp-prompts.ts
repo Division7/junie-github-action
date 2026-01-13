@@ -9,7 +9,7 @@
 
 export const MCP_TOOL_PROMPTS = {
     mcp_github_checks_server: 'Use get_pr_failed_checks_info to retrieve detailed information about failed CI/CD checks if needed.',
-    mcp_github_inline_comment_server: 'Use post_inline_review_comment to provide inline code review comments where applicable.',
+    mcp_github_inline_comment_server: 'Use post_inline_review_comment to provide inline code review comments where applicable. Use it only if you need to provide suggestions or improvements for code changes.',
 };
 
 /**

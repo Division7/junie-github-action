@@ -5,6 +5,7 @@ import * as core from "@actions/core";
 import {ENV_VARS, OUTPUT_VARS} from "../constants/environment";
 import {handleStepError} from "../utils/error-handler";
 import {isReviewOrCommentHasResolveConflictsTrigger} from "../github/validation/trigger";
+import {sanitizeJunieOutput} from "../utils/sanitizer";
 
 export enum ActionType {
     WRITE_COMMENT = 'WRITE_COMMENT',
@@ -39,8 +40,12 @@ export async function handleResults() {
             );
         }
         const actionToDo = await getActionToDo(context);
-        const title = junieJsonOutput.taskName || (isResolveConflict ? `Resolve conflicts for ${context.entityNumber} PR` : 'Junie finished task successfully')
-        const body = junieJsonOutput.result
+        // Sanitize Junie's output to prevent token leakage and self-triggering
+        const rawTitle = junieJsonOutput.taskName || (isResolveConflict ? `Resolve conflicts for ${context.entityNumber} PR` : 'Junie finished task successfully')
+        const rawBody = junieJsonOutput.result
+        const triggerPhrase = context.inputs.triggerPhrase
+        const title = sanitizeJunieOutput(rawTitle, triggerPhrase)
+        const body = sanitizeJunieOutput(rawBody, triggerPhrase)
         let issueId
         if (isTriggeredByUserInteraction(context)) {
             issueId = context.entityNumber

@@ -21,13 +21,14 @@ import {
     JunieExecutionContext
 } from "../context";
 import {downloadJiraAttachmentsAndRewriteText} from "./attachment-downloader";
+import {sanitizeContent} from "../../utils/sanitizer";
 
 export class NewGitHubPromptFormatter {
 
     async generatePrompt(context: JunieExecutionContext, fetchedData: FetchedData, userPrompt?: string, attachGithubContextToCustomPrompt: boolean = true) {
-        // If user provided custom prompt and doesn't want GitHub context, return only the prompt
+        // If user provided custom prompt and doesn't want GitHub context, sanitize and return it
         if (userPrompt && !attachGithubContextToCustomPrompt) {
-            return userPrompt;
+            return sanitizeContent(userPrompt);
         }
 
         // Handle Jira issue integration
@@ -43,7 +44,9 @@ export class NewGitHubPromptFormatter {
         const timelineInfo = this.getTimelineInfo(fetchedData);
         const reviewsInfo = this.getReviewsInfo(fetchedData);
         const changedFilesInfo = this.getChangedFilesInfo(fetchedData);
-        return `You were triggered as a GitHub AI Assistant by ${context.eventName} action. Your task is to:
+
+        // Build the final prompt
+        const prompt = `You were triggered as a GitHub AI Assistant by ${context.eventName} action. Your task is to:
 
 ${userInstruction ? userInstruction : ""}
 ${repositoryInfo ? repositoryInfo : ""}
@@ -53,7 +56,11 @@ ${timelineInfo ? timelineInfo : ""}
 ${reviewsInfo ? reviewsInfo : ""}
 ${changedFilesInfo ? changedFilesInfo : ""}
 ${actorInfo ? actorInfo : ""}
-`
+`;
+
+        // Sanitize the entire prompt once to prevent prompt injection attacks
+        // This removes HTML comments, invisible characters, obfuscated entities, etc.
+        return sanitizeContent(prompt);
     }
 
     private async generateJiraPrompt(context: JunieExecutionContext): Promise<string> {
@@ -73,7 +80,7 @@ ${actorInfo ? actorInfo : ""}
             }).join('\n\n')
             : '';
 
-        // Form the complete prompt text first
+        // Form the complete prompt text
         const promptText = `You were triggered as a GitHub AI Assistant by a Jira issue. Your task is to implement the requested feature or fix based on the Jira issue details below.
 
 <jira_issue>
@@ -84,8 +91,9 @@ Description: ${jira.issueDescription}${commentsInfo}
 </jira_issue>
 `;
 
-        // Download all attachments referenced in text (single pass)
-        return await downloadJiraAttachmentsAndRewriteText(promptText, jira.attachments);
+        // Download all attachments referenced in text (single pass), then sanitize
+        const promptWithAttachments = await downloadJiraAttachmentsAndRewriteText(promptText, jira.attachments);
+        return sanitizeContent(promptWithAttachments);
     }
 
     private getUserInstruction(context: JunieExecutionContext, customPrompt?: string): string | undefined {
@@ -101,9 +109,11 @@ Description: ${jira.issueDescription}${commentsInfo}
         } else if (isIssueCommentEvent(context)) {
             githubUserInstruction = context.payload.comment.body
         }
-        return customPrompt || githubUserInstruction ? `
+
+        const instruction = customPrompt || githubUserInstruction;
+        return instruction ? `
         <user_instruction>
-        ${customPrompt || githubUserInstruction}
+        ${instruction}
 </user_instruction>` : undefined
     }
 
