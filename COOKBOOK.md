@@ -272,6 +272,7 @@ jobs:
       pull-requests: write
       issues: write
       checks: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -465,7 +466,7 @@ jobs:
 
       - name: Run Junie
         id: junie
-        uses: JetBrains/junie-github-action@main
+        uses: JetBrains/junie-github-action@v0
         with:
           junie_api_key: ${{ secrets.JUNIE_API_KEY }}
           resolve_conflicts: true
