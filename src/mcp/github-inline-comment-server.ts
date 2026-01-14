@@ -195,7 +195,7 @@ async function initializeServer() {
                     .describe("The file path to comment on (e.g., 'src/utils/helper.ts')"),
                 commentBody: z
                     .string()
-                    .describe("The comment text (supports markdown and GitHub code suggestion blocks). For code suggestions, use: ```suggestion\\nreplacement code\\n```. IMPORTANT: The suggestion block will REPLACE the ENTIRE line range (single line or startLineNumber to lineNumber). Ensure the replacement is syntactically complete and valid."),
+                    .describe("The comment text (supports markdown and GitHub code suggestion blocks). For code suggestions, use: ```suggestion\\nreplacement code\\n``` explanation of this suggestion. IMPORTANT: The suggestion block will REPLACE the ENTIRE line range (single line or startLineNumber to lineNumber). Ensure the replacement is syntactically complete and valid. Also if you provide a suggestion block explain the reason"),
                 lineNumber: z
                     .number()
                     .int()
