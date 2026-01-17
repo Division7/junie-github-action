@@ -6,6 +6,7 @@ import {ENV_VARS, OUTPUT_VARS} from "../constants/environment";
 import {handleStepError} from "../utils/error-handler";
 import {isReviewOrCommentHasResolveConflictsTrigger} from "../github/validation/trigger";
 import {sanitizeJunieOutput} from "../utils/sanitizer";
+import { parseArgs } from "util";
 
 export enum ActionType {
     WRITE_COMMENT = 'WRITE_COMMENT',
@@ -17,8 +18,17 @@ export enum ActionType {
 
 export async function handleResults() {
     try {
+        const {values} = parseArgs({
+          args: Bun.argv,
+          options: {
+            file: {
+              type: "string",
+            },
+          },
+        });
+
         const stringJunieJsonOutput = process.env[ENV_VARS.JSON_JUNIE_OUTPUT]
-        if (!stringJunieJsonOutput) {
+        if (!stringJunieJsonOutput || values.file === undefined) {
             throw new Error(
                 `❌ Failed to retrieve Junie execution results. ` +
                 `This could be due to:\n` +
@@ -27,7 +37,20 @@ export async function handleResults() {
                 `Please check the Junie execution logs for details.`
             );
         }
-        const junieJsonOutput = JSON.parse(stringJunieJsonOutput) as any
+        let junieJsonOutput: any;
+
+        if(stringJunieJsonOutput){
+            junieJsonOutput = JSON.parse(stringJunieJsonOutput) as any;
+        }else if(values.file){
+            const file = Bun.file(values.file);
+            if(!(await file.exists())){
+                throw new Error(
+                    `❌ Junie execution results file not found. ` +
+                    `Please check the Junie execution logs for details.`
+                );
+            }
+            junieJsonOutput = await file.json();
+        }
         const context = JSON.parse(process.env[OUTPUT_VARS.PARSED_CONTEXT]!) as JunieExecutionContext
         const isResolveConflict = context.inputs.resolveConflicts || isReviewOrCommentHasResolveConflictsTrigger(context)
         const junieErrors = junieJsonOutput.errors
