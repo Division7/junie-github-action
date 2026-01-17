@@ -175,6 +175,7 @@ runs:
         WORKING_DIR: ${{ inputs.junie_work_dir }}
       run: |
        junie --cache-dir="${WORKING_DIR}" --input-format="json" --output-format="json" --auth="${CLI_TOKEN}" <<<"${JUNIE_JSON_TASK}" > "/tmp/junie-output.json"
+       cat /tmp/junie-output.json
 
     - name: Handle Junie results
       if: always() && steps.prepare.outputs.SHOULD_SKIP != 'true'
