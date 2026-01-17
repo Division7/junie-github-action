@@ -20,6 +20,7 @@ export async function handleResults() {
     try {
         const {values} = parseArgs({
           args: Bun.argv,
+          allowPositionals: true,
           options: {
             file: {
               type: "string",
