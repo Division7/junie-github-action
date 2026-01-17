@@ -174,11 +174,7 @@ runs:
         MATTERHORN_DEBUG_LOG: false
         WORKING_DIR: ${{ inputs.junie_work_dir }}
       run: |
-        OUTPUT=$(junie --cache-dir="${WORKING_DIR}" --input-format="json" --output-format="json" --auth="${CLI_TOKEN}" <<<"${JUNIE_JSON_TASK}")
-        echo "json_output<<EOF" >> $GITHUB_OUTPUT
-        echo "$OUTPUT" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-        echo "$OUTPUT" > "/tmp/junie-output.json"
+       junie --cache-dir="${WORKING_DIR}" --input-format="json" --output-format="json" --auth="${CLI_TOKEN}" <<<"${JUNIE_JSON_TASK}" > "/tmp/junie-output.json"
 
     - name: Handle Junie results
       if: always() && steps.prepare.outputs.SHOULD_SKIP != 'true'
