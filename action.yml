@@ -257,7 +257,7 @@ runs:
       if: success() && steps.prepare.outputs.SHOULD_SKIP != 'true'
       shell: bash
       run: |
-        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/give-feedback.ts
+        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/give-feedback.ts --file="/tmp/junie-output.json"
       env:
         IS_JOB_FAILED: false
         INIT_COMMENT_ID: ${{ steps.prepare.outputs.INIT_COMMENT_ID }}
@@ -281,7 +281,7 @@ runs:
       if: failure() && steps.prepare.outputs.SHOULD_SKIP != 'true'
       shell: bash
       run: |
-        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/give-feedback.ts
+        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/give-feedback.ts --file="/tmp/junie-output.json"
       env:
         IS_JOB_FAILED: true
         INIT_COMMENT_ID: ${{ steps.prepare.outputs.INIT_COMMENT_ID }}

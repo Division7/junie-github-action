@@ -7,6 +7,7 @@ import {formatJunieSummary} from "./format-summary";
 import {appendFileSync} from "fs";
 import {buildGitHubApiClient} from "../github/api/client";
 import {handleStepError} from "../utils/error-handler";
+import {parseArgs} from "util";
 
 /**
  * Writes feedback comment to GitHub issue/PR if initCommentId is available
@@ -40,11 +41,23 @@ async function writeFeedbackComment(isJobFailed: boolean, initCommentId?: string
  * Generates GitHub Actions Job Summary with Junie execution results
  */
 async function generateJobSummary(isJobFailed: boolean): Promise<void> {
+    const {values} = parseArgs({
+        args: Bun.argv,
+        options: {
+            file: {
+                type: "string",
+            },
+        },
+        allowPositionals: true
+    });
+
     const summaryFile = process.env.GITHUB_STEP_SUMMARY;
     if (!summaryFile) {
         console.log("GITHUB_STEP_SUMMARY not available, skipping summary generation");
         return;
     }
+
+    const file = Bun.file(values.file as string);
 
     // Build junieOutput from already parsed env variables
     const junieOutput: any = {};
@@ -65,7 +78,7 @@ async function generateJobSummary(isJobFailed: boolean): Promise<void> {
     const jsonOutput = process.env[ENV_VARS.JSON_JUNIE_OUTPUT];
     if (jsonOutput) {
         try {
-            const parsed = JSON.parse(jsonOutput);
+            const parsed = await file.json();
             if (parsed.duration_ms) {
                 junieOutput.duration_ms = parsed.duration_ms;
             }
