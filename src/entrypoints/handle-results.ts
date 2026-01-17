@@ -29,7 +29,7 @@ export async function handleResults() {
         });
 
         const stringJunieJsonOutput = process.env[ENV_VARS.JSON_JUNIE_OUTPUT]
-        if (!stringJunieJsonOutput || values.file === undefined) {
+        if (!stringJunieJsonOutput && values.file === undefined) {
             throw new Error(
                 `❌ Failed to retrieve Junie execution results. ` +
                 `This could be due to:\n` +
