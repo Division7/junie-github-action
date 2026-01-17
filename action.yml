@@ -185,7 +185,7 @@ runs:
       shell: bash
       id: junie-run-results
       run: |
-        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/handle-results.ts --file "/tmp/junie-output.json"
+        bun run ${GITHUB_ACTION_PATH}/src/entrypoints/handle-results.ts --file="/tmp/junie-output.json"
       env:
         JSON_JUNIE_OUTPUT: ${{ steps.junie-run.outputs.json_output }}
         PARSED_CONTEXT: ${{ steps.prepare.outputs.PARSED_CONTEXT }}
