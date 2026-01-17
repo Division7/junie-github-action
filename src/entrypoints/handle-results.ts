@@ -63,6 +63,8 @@ export async function handleResults() {
                 `Review the errors above and check the Junie execution logs for more details.`
             );
         }
+
+        console.log(junieJsonOutput)
         const rawResult = junieJsonOutput.result
         if (rawResult === "Empty" || !rawResult || rawResult.trim() === "") {
             throw new Error(
