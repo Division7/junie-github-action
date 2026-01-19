@@ -9,7 +9,7 @@
 
 export const MCP_TOOL_PROMPTS = {
     mcp_github_checks_server: 'Use get_pr_failed_checks_info to retrieve detailed information about failed CI/CD checks if needed.',
-    mcp_github_inline_comment_server: 'Use post_inline_review_comment to provide inline code review comments where applicable. Use it only if you need to provide suggestions or improvements for code changes.',
+    mcp_github_inline_comment_server: 'MANDATORY for code reviews: Use post_inline_review_comment to provide inline code review comments. Supports GitHub suggestion syntax (```suggestion) for proposing code changes. Use it for every specific finding to ensure comments appear exactly where the code changed.',
 };
 
 /**

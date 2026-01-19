@@ -4,7 +4,9 @@ import {
     isTriggeredByUserInteraction,
     isPushEvent,
     isJiraWorkflowDispatchEvent,
-    isResolveConflictsWorkflowDispatchEvent, isPullRequestEvent
+    isResolveConflictsWorkflowDispatchEvent,
+    isCodeReviewWorkflowDispatchEvent,
+    isPullRequestEvent
 } from "../context";
 import {checkHumanActor} from "../validation/actor";
 import {postJunieWorkingStatusComment} from "../operations/comments/feedback";
@@ -18,7 +20,7 @@ import {Octokits} from "../api/client";
 import {prepareJunieTask} from "./junie-tasks";
 import {prepareJunieCLIToken} from "./junie-token";
 import {OUTPUT_VARS} from "../../constants/environment";
-import {RESOLVE_CONFLICTS_ACTION} from "../../constants/github";
+import {CODE_REVIEW_ACTION, RESOLVE_CONFLICTS_ACTION} from "../../constants/github";
 import {getJiraClient} from "../jira/client";
 
 /**
@@ -60,13 +62,9 @@ export async function initializeJunieExecution({
     const mcpServers = context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : []
     console.log(`MCP Servers enabled by user: ${mcpServers}`)
 
-    // Get PR-specific info
-    let commitSha
-    let prNumber
-    if (isPullRequestEvent(context)) {
-        commitSha = context.payload.pull_request.head.sha;
-        prNumber = context.entityNumber;
-    }
+    // Get PR-specific info for MCP servers
+    const prNumber = context.isPR ? context.entityNumber : undefined;
+    const commitSha = branchInfo.headSha;
 
     // Prepare MCP configuration with automatic server activation
     // - Inline comment server: enabled for PRs (requires commitSha)
@@ -96,6 +94,22 @@ async function shouldHandle(context: JunieExecutionContext, octokit: Octokits): 
         }
     }
 
+    // 1. Allow explicit Code Review dispatch (the actual review run)
+    if (isCodeReviewWorkflowDispatchEvent(context)) {
+        console.log("✓ Code Review dispatch detected, proceeding with review.");
+        return true;
+    }
+
+    // 2. Automatic PR triggering: redirects to workflow_dispatch
+    if (isPullRequestEvent(context) && (context.eventAction === "opened" || context.eventAction === "synchronize")) {
+        if (await checkHumanActor(octokit.rest, context)) {
+            await runCodeReviewWorkflow(octokit, context);
+            console.log("✓ Pull Request event handled. Junie will perform the review in the dispatched workflow run. Skipping this run to avoid duplicate comments.");
+        }
+        // Always return false for the original PR event to avoid double execution
+        return false;
+    }
+
     if (context.inputs.prompt) {
         return true;
     }
@@ -109,6 +123,41 @@ async function shouldHandle(context: JunieExecutionContext, octokit: Octokits): 
     }
 
     return isTriggeredByUserInteraction(context) && detectJunieTriggerPhrase(context) && checkHumanActor(octokit.rest, context);
+}
+
+async function runCodeReviewWorkflow(octokit: Octokits, context: JunieExecutionContext & { payload: any }) {
+    const {owner, name} = context.payload.repository;
+    const prNumber = context.entityNumber;
+    const branch = context.payload.pull_request.head.ref;
+
+    const {ENV_VARS} = await import("../../constants/environment");
+    const ref = process.env[ENV_VARS.GITHUB_WORKFLOW_REF]!;
+    if (!ref) {
+        console.error("GITHUB_WORKFLOW_REF is not defined");
+        return;
+    }
+
+    const refWithoutBranch = ref.split('@')[0];
+    const fileName = refWithoutBranch.split('/').pop()!;
+
+    console.log(`✓ Automatically triggering Code Review dispatch for PR #${prNumber} in workflow ${fileName}`);
+
+    try {
+        await octokit.rest.actions.createWorkflowDispatch({
+            owner: owner.login,
+            repo: name,
+            workflow_id: fileName,
+            ref: branch,
+            inputs: {
+                action: CODE_REVIEW_ACTION,
+                prNumber: String(prNumber),
+                commitSha: context.payload.pull_request.head.sha
+            }
+        });
+        console.log(`✓ Dispatch successful for workflow ${fileName} on branch ${branch}`);
+    } catch (error: any) {
+        console.error(`Failed to trigger Code Review dispatch for ${fileName}. Ensure 'workflow_dispatch' is defined in your YAML.`, error.message);
+    }
 }
 
 
