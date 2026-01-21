@@ -81,12 +81,8 @@ export async function prepareJunieTask(
 
         let promptText: string;
         if (issue && isCodeReview) {
-            // Replace CODE_REVIEW_ACTION with default code review prompt if it's in custom prompt
-            // Otherwise just use the default prompt
-            const instructions = isCodeReviewInPrompt
-                ? customPrompt!.replace(CODE_REVIEW_ACTION, DEFAULT_CODE_REVIEW_PROMPT)
-                : DEFAULT_CODE_REVIEW_PROMPT;
-            promptText = await formatter.generatePrompt(context, fetchedData, instructions, true);
+            // Use default code review prompt when code-review trigger is detected
+            promptText = await formatter.generatePrompt(context, fetchedData, DEFAULT_CODE_REVIEW_PROMPT, true);
         } else {
             promptText = await formatter.generatePrompt(context, fetchedData, customPrompt, context.inputs.attachGithubContextToCustomPrompt);
         }
