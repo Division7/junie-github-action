@@ -19,6 +19,7 @@ export type BranchInfo = {
     workingBranch: string;
     isNewBranch: boolean;
     prBaseBranch?: string;
+    headSha?: string;
 };
 
 /**
@@ -91,7 +92,7 @@ function shouldUseExistingPRBranch(
  * @returns Branch information object with base, working branch names and isNewBranch flag
  * @throws {Error} if git operations fail (branch doesn't exist, network issues, etc.)
  */
-async function createNewBranch(baseBranch: string, branchName: string, prBaseBranch: string | undefined) {
+async function createNewBranch(baseBranch: string, branchName: string, prBaseBranch: string | undefined, headSha?: string) {
     // Normalize branch name: lowercase and limit to 50 chars for git compatibility
     const newBranch = branchName.toLowerCase().substring(0, 50);
 
@@ -105,7 +106,8 @@ async function createNewBranch(baseBranch: string, branchName: string, prBaseBra
             baseBranch: baseBranch,
             workingBranch: newBranch,
             isNewBranch: true,
-            prBaseBranch
+            prBaseBranch,
+            headSha
         };
     } catch (error) {
         console.error(`❌ Failed to create branch "${newBranch}" from "${baseBranch}":`, error);
@@ -124,6 +126,7 @@ async function createNewBranch(baseBranch: string, branchName: string, prBaseBra
 async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octokit: Octokits): Promise<BranchInfo> {
     let baseBranch = context.inputs.baseBranch || context.payload.repository.default_branch
     let prBaseBranch: string | undefined;
+    let headSha: string | undefined;
     const entityNumber = context.entityNumber;
     const isPR = context.isPR;
     const createNewBranchForPR = context.inputs.createNewBranchForPR;
@@ -133,6 +136,7 @@ async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octo
         let sourceBranch: string
         let state: string;
         let prAuthor: string;
+
         if (isPullRequestEvent(context)
             || isPullRequestReviewEvent(context)
             || isPullRequestReviewCommentEvent(context)) {
@@ -140,6 +144,7 @@ async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octo
             sourceBranch = context.payload.pull_request.head.ref;
             state = context.payload.pull_request.state;
             prAuthor = context.payload.pull_request.user.login;
+            headSha = context.payload.pull_request.head.sha;
         } else {
             try {
                 const data = (await octokit.rest.pulls.get({
@@ -151,6 +156,7 @@ async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octo
                 sourceBranch = data.head.ref
                 state = data.state;
                 prAuthor = data.user.login;
+                headSha = data.head.sha;
             } catch (error) {
                 const repoFullName = `${context.payload.repository.owner.login}/${context.payload.repository.name}`;
                 throw new Error(
@@ -189,6 +195,7 @@ async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octo
                     baseBranch: baseBranch,
                     workingBranch: sourceBranch!,
                     isNewBranch: false,
+                    headSha: headSha
                 };
             } catch (error) {
                 throw new Error(
@@ -217,7 +224,7 @@ async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octo
         const entityType = isPR ? "pr" : entityNumber ? "issue" : "run";
         const branchName = `${WORKING_BRANCH_PREFIX}${entityType}${entityNumber ? `-${entityNumber}` : ""}-${context.runId}`;
 
-        return await createNewBranch(baseBranch, branchName, prBaseBranch)
+        return await createNewBranch(baseBranch, branchName, prBaseBranch, headSha)
     }
 
     await $`git checkout -B ${baseBranch} origin/${baseBranch}`;
@@ -226,7 +233,8 @@ async function prepareWorkingBranchForJunie(context: JunieExecutionContext, octo
         baseBranch: baseBranch,
         workingBranch: baseBranch,
         isNewBranch: false,
-        prBaseBranch
+        prBaseBranch,
+        headSha
     }
 }
 

@@ -5,7 +5,6 @@ import {
     isPushEvent,
     isJiraWorkflowDispatchEvent,
     isResolveConflictsWorkflowDispatchEvent, isPullRequestEvent, isPullRequestReviewEvent, isIssueCommentEvent,
-    isPullRequestReviewCommentEvent
 } from "../context";
 import {checkHumanActor} from "../validation/actor";
 import {postJunieWorkingStatusComment} from "../operations/comments/feedback";
@@ -61,25 +60,9 @@ export async function initializeJunieExecution({
     const mcpServers = context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : []
     console.log(`MCP Servers enabled by user: ${mcpServers}`)
 
-    // Get PR-specific info
-    let commitSha
-    let prNumber
-    if (isPullRequestEvent(context)
-        || isPullRequestReviewEvent(context)
-        || isPullRequestReviewCommentEvent(context)) {
-        commitSha = context.payload.pull_request.head.sha;
-        prNumber = context.entityNumber;
-    }
-    if (isIssueCommentEvent(context) && context.isPR) {
-        prNumber = context.entityNumber;
-        // Fetch PR details to get the commit SHA
-        const {data: pr} = await octokit.rest.pulls.get({
-            owner: context.payload.repository.owner.login,
-            repo: context.payload.repository.name,
-            pull_number: prNumber!,
-        });
-        commitSha = pr.head.sha;
-    }
+    // Get PR-specific info for MCP servers
+    const prNumber = context.isPR ? context.entityNumber : undefined;
+    const commitSha = branchInfo.headSha;
 
     // Prepare MCP configuration with automatic server activation
     // - Inline comment server: enabled for PRs (requires commitSha)
@@ -123,7 +106,6 @@ async function shouldHandle(context: JunieExecutionContext, octokit: Octokits): 
 
     return isTriggeredByUserInteraction(context) && detectJunieTriggerPhrase(context) && checkHumanActor(octokit.rest, context);
 }
-
 
 async function shouldResolveConflicts(context: JunieExecutionContext, octokit: Octokits): Promise<boolean> {
     console.log('Checking for conflicts...')

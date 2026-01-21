@@ -1,4 +1,5 @@
 import {
+    isResolveConflictsWorkflowDispatchEvent,
     JunieExecutionContext,
     isIssueCommentEvent,
     isIssuesEvent,
@@ -8,8 +9,12 @@ import {
 } from "../context";
 import * as core from "@actions/core";
 import {BranchInfo} from "../operations/branch";
-import {isReviewOrCommentHasResolveConflictsTrigger} from "../validation/trigger";
+import {
+    isReviewOrCommentHasCodeReviewTrigger,
+    isReviewOrCommentHasResolveConflictsTrigger
+} from "../validation/trigger";
 import {OUTPUT_VARS} from "../../constants/environment";
+import {CODE_REVIEW_ACTION, createCodeReviewPrompt} from "../../constants/github";
 import {Octokits} from "../api/client";
 import {NewGitHubPromptFormatter} from "./new-prompt-formatter";
 import {validateInputSize} from "../validation/input-size";
@@ -67,8 +72,22 @@ export async function prepareJunieTask(
             fetchedData = await fetcher.fetchIssueData(owner, repo, context.entityNumber, triggerTime);
         }
 
-        // Generate prompt using formatter
-        let promptText = await formatter.generatePrompt(context, fetchedData, customPrompt, context.inputs.attachGithubContextToCustomPrompt);
+        const issue = fetchedData.pullRequest || fetchedData.issue;
+
+        // Check if prompt contains CODE_REVIEW_ACTION phrase or if comment/review has code-review trigger
+        const isCodeReviewInPrompt = customPrompt?.includes(CODE_REVIEW_ACTION);
+        const isCodeReviewInComment = isReviewOrCommentHasCodeReviewTrigger(context);
+        const isCodeReview = isCodeReviewInPrompt || isCodeReviewInComment;
+
+        let promptText: string;
+        if (issue && isCodeReview) {
+            const branchName = branchInfo.prBaseBranch || branchInfo.baseBranch;
+            const diffPoint = context.isPR ? String(context.entityNumber) : branchName;
+            const codeReviewPrompt = createCodeReviewPrompt(diffPoint);
+            promptText = await formatter.generatePrompt(context, fetchedData, codeReviewPrompt, true);
+        } else {
+            promptText = await formatter.generatePrompt(context, fetchedData, customPrompt, context.inputs.attachGithubContextToCustomPrompt);
+        }
 
         // Append MCP tools information if any MCP servers are enabled
         const mcpToolsPrompt = generateMcpToolsPrompt(enabledMcpServers);
