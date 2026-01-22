@@ -4,7 +4,7 @@ import {
     isTriggeredByUserInteraction,
     isPushEvent,
     isJiraWorkflowDispatchEvent,
-    isResolveConflictsWorkflowDispatchEvent, isPullRequestEvent
+    isResolveConflictsWorkflowDispatchEvent, isPullRequestEvent, isPullRequestReviewEvent, isIssueCommentEvent,
 } from "../context";
 import {checkHumanActor} from "../validation/actor";
 import {postJunieWorkingStatusComment} from "../operations/comments/feedback";
@@ -60,13 +60,9 @@ export async function initializeJunieExecution({
     const mcpServers = context.inputs.allowedMcpServers ? context.inputs.allowedMcpServers.split(',') : []
     console.log(`MCP Servers enabled by user: ${mcpServers}`)
 
-    // Get PR-specific info
-    let commitSha
-    let prNumber
-    if (isPullRequestEvent(context)) {
-        commitSha = context.payload.pull_request.head.sha;
-        prNumber = context.entityNumber;
-    }
+    // Get PR-specific info for MCP servers
+    const prNumber = context.isPR ? context.entityNumber : undefined;
+    const commitSha = branchInfo.headSha;
 
     // Prepare MCP configuration with automatic server activation
     // - Inline comment server: enabled for PRs (requires commitSha)
@@ -110,7 +106,6 @@ async function shouldHandle(context: JunieExecutionContext, octokit: Octokits): 
 
     return isTriggeredByUserInteraction(context) && detectJunieTriggerPhrase(context) && checkHumanActor(octokit.rest, context);
 }
-
 
 async function shouldResolveConflicts(context: JunieExecutionContext, octokit: Octokits): Promise<boolean> {
     console.log('Checking for conflicts...')

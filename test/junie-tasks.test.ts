@@ -16,6 +16,23 @@ mock.module("../src/github/junie/attachment-downloader", () => ({
 
 describe("prepareJunieTask", () => {
     const createMockContext = (overrides: Partial<JunieExecutionContext> = {}): JunieExecutionContext => {
+        const defaultInputs = {
+            resolveConflicts: false,
+            createNewBranchForPR: false,
+            silentMode: false,
+            useSingleComment: false,
+            attachGithubContextToCustomPrompt: true,
+            junieWorkingDir: "/tmp",
+            appToken: "token",
+            prompt: "",
+            triggerPhrase: "@junie-agent",
+            assigneeTrigger: "",
+            labelTrigger: "",
+            allowedMcpServers: ""
+        };
+
+        const { inputs: _, ...restOverrides } = overrides;
+
         return {
             eventName: "issue_comment",
             runId: "123",
@@ -23,20 +40,7 @@ describe("prepareJunieTask", () => {
             actorEmail: "test@example.com",
             tokenOwner: "user",
             isPR: false,
-            inputs: {
-                resolveConflicts: false,
-                createNewBranchForPR: false,
-                silentMode: false,
-                useSingleComment: false,
-                attachGithubContextToCustomPrompt: true,
-                junieWorkingDir: "/tmp",
-                appToken: "token",
-                prompt: "",
-                triggerPhrase: "@junie-agent",
-                assigneeTrigger: "",
-                labelTrigger: "",
-                allowedMcpServers: ""
-            },
+            inputs: overrides.inputs ? { ...defaultInputs, ...overrides.inputs } : defaultInputs,
             payload: {
                 action: "created",
                 issue: {
@@ -58,7 +62,7 @@ describe("prepareJunieTask", () => {
                     name: "repo"
                 }
             } as any,
-            ...overrides
+            ...restOverrides
         } as JunieExecutionContext;
     };
 
@@ -381,6 +385,68 @@ describe("prepareJunieTask", () => {
             expect(result.task).toContain("<user_instruction>");
             expect(result.task).toContain("Changes needed");
             expect(result.task).toContain("<repository>");
+        });
+
+        test("should replace CODE_REVIEW_ACTION phrase with default code review prompt", async () => {
+            const context = createMockContext({
+                eventName: "pull_request",
+                isPR: true,
+                entityNumber: 123,
+                inputs: {
+                    prompt: "code-review"
+                },
+                payload: {
+                    pull_request: {
+                        number: 123,
+                        title: "Test PR",
+                        updated_at: "2024-01-01T00:00:00Z"
+                    },
+                    repository: {
+                        owner: {login: "owner"},
+                        name: "repo"
+                    }
+                } as any
+            });
+            const octokit = createMockOctokit();
+
+            const result = await prepareJunieTask(context, branchInfo, octokit);
+
+            expect(result).toBeDefined();
+            expect(result.task).toBeDefined();
+            expect(result.task).toContain("Get the Pull Request diff");
+        });
+
+        test("should use default code review prompt when code-review is in comment", async () => {
+            const context = createMockContext({
+                eventName: "issue_comment",
+                isPR: true,
+                entityNumber: 123,
+                payload: {
+                    issue: {
+                        number: 123,
+                        title: "Test PR",
+                        pull_request: {},
+                        updated_at: "2024-01-01T00:00:00Z"
+                    },
+                    comment: {
+                        id: 1,
+                        body: "@junie-agent code-review",
+                        user: {login: "reviewer"},
+                        created_at: "2024-01-01T00:00:00Z"
+                    },
+                    repository: {
+                        owner: {login: "owner"},
+                        name: "repo"
+                    }
+                } as any
+            });
+            const octokit = createMockOctokit();
+
+            const result = await prepareJunieTask(context, branchInfo, octokit);
+
+            expect(result).toBeDefined();
+            expect(result.task).toBeDefined();
+            expect(result.task).toContain("Get the Pull Request diff");
         });
     });
 
